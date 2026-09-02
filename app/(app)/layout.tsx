@@ -45,10 +45,12 @@ export default async function AppLayout({
     <SidebarProvider defaultOpen={defaultOpen}>
       <AppSidebar email={email} name={name} />
       <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4 md:hidden">
-          <SidebarTrigger />
-          <Separator orientation="vertical" className="mr-1 h-4" />
-          <Wordmark href="/dashboard" />
+        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+          <SidebarTrigger className="-ml-1" />
+          <div className="flex items-center gap-2 md:hidden">
+            <Separator orientation="vertical" className="mr-1 h-4" />
+            <Wordmark href="/dashboard" />
+          </div>
         </header>
         {children}
       </SidebarInset>
