@@ -80,3 +80,78 @@ No known debt should be invented merely to fill this file.
 - **When to address:** Decide to either commit the block or set `agentRules: false`
   in `next.config.ts`.
 - **Resolution:** —
+
+## TD-005 — No automated RLS / two-user isolation test
+
+- **Status:** OPEN
+- **Introduced:** 2026-09-02 (tracked separately from TD-002)
+- **Area:** authorization / multi-tenant security
+- **Why it exists:** RLS isolation and the composite-FK cross-tenant invariant
+  (D-018, migration `20260902101500`) are enforced by the database and were
+  verified **once, manually**, against the live project. There is no CI test that
+  re-asserts: User B cannot SELECT/UPDATE/DELETE User A's rows; `anon` sees
+  nothing; a child row with User B's `user_id` + User A's `profile_id` is
+  rejected.
+- **Risk:** A future migration could drop a policy or a composite FK and nothing
+  would catch it. Not blocking Phase 2 (the constraints exist and hold), but it
+  **gates "initial production"** — see `CICD.md` → RLS / tenant-isolation tests.
+- **When to address:** Phase 15, or sooner as a `db-tests` CI job against a local
+  Supabase stack. Add the isolation assertions as part of Phase 2's test work so
+  the pattern exists early.
+- **Resolution:** —
+
+## TD-006 — `application.mode` / `job.status` enums predate the current domain model
+
+- **Status:** OPEN
+- **Introduced:** 2026-09-01 (initial schema), surfaced 2026-09-02
+- **Area:** schema ↔ product model drift
+- **Why it exists:** `application.mode` is `check (mode in ('manual','auto'))` —
+  the current direction (D-014) is `MANUAL` / `ASSISTED`, with autonomous `auto`
+  postponed. The current `skill` table is denormalized (`skill.profile_id`);
+  Phase 2 wants canonical `skill` + `profile_skill`.
+- **Risk:** Low now (no data). These tables get reworked by Phase 2 / Phase 8
+  migrations anyway.
+- **When to address:** Fold into the Phase 2 (skill normalization) and Phase 8
+  (`application` rebuild) migrations. Do not do a standalone migration now.
+- **Resolution:** —
+
+---
+
+## Resolved
+
+### R-001 — Cross-tenant parent/child FK vulnerability
+
+- **Status:** RESOLVED (2026-09-02) — migration `20260902101500_tenant_scoped_child_fks`
+- **Was:** child tables (`experience`, `project`, `skill`, `education`,
+  `master_resume`, `application`) had a single-column FK to their parent; RLS
+  checked `user_id` on the row but nothing stopped a caller referencing another
+  tenant's `profile_id` / `resume_version_id`.
+- **Fix:** composite `(id, user_id)` unique keys on `profile` and
+  `resume_version`; every child FK now references `(parent_id, user_id)`.
+  Verified: a `user_id` mismatch raises `foreign_key_violation`.
+- **Follow-up:** TD-005 (make it a standing CI test).
+
+### R-002 — Phase 1 auth-layer review findings
+
+- **Status:** RESOLVED (2026-09-02) on branch `fix/phase-1-tenant-isolation`
+- Password reset now revokes other sessions; `?error=` is a mapped code, not
+  reflected text; `ensureAccountInitialized` no longer writes on every request;
+  `redirectTo` validation centralized in `lib/auth/redirect.ts` (unit-tested).
+
+---
+
+## Postponed work (deliberate — not debt, tracked so it is not forgotten)
+
+- **Autonomous Auto Apply** — Future Optional A in `BUILD_PLAN.md`. Rule engine,
+  idempotency keys, concurrent-worker safety all deferred until Assisted Apply is
+  proven.
+- **ATS platforms beyond Greenhouse + Lever** (Workable, Wellfound, …) — added
+  only after the assisted architecture is reliable (D-015).
+- **Pricing / billing model** — Phase 13, blocked on real cost measurement (§41).
+- **Deeper observability** (Sentry, cost metrics, correlation IDs) — Phase 15.
+- **Broad E2E coverage** (Playwright) — Phase 16.
+- **Session hardening beyond current** (device management, step-up auth) — Phase 15.
+- **Additional AI providers** behind the abstraction — only if a concrete need
+  appears; Claude is the sole provider for now.
+- **Separate non-prod Supabase project for Preview** — prerequisite for "initial
+  production" (`CICD.md` → Environments).

@@ -89,7 +89,7 @@ export async function signInWithGoogle(formData: FormData): Promise<void> {
     },
   })
   if (error || !data.url) {
-    redirect(`/sign-in?error=${encodeURIComponent("Could not start Google sign-in.")}`)
+    redirect("/sign-in?error=oauth_start")
   }
   redirect(data.url)
 }
@@ -149,6 +149,11 @@ export async function updatePassword(
 
   const { error } = await supabase.auth.updateUser({ password })
   if (error) return { error: friendlyAuthError(error.message) }
+
+  // A password reset is often triggered because the account may be compromised.
+  // Revoke every other session so an attacker's existing session dies with the
+  // old password; the current session (this browser) stays signed in.
+  await supabase.auth.signOut({ scope: "others" })
 
   redirect("/dashboard")
 }

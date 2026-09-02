@@ -17,15 +17,23 @@ export default async function AppLayout({
   const user = await requireUser()
   const supabase = await createClient()
 
-  // Defence-in-depth: guarantee the base rows exist even if the signup trigger
-  // never fired for this account. Idempotent — safe on every request.
-  await ensureAccountInitialized(supabase, user)
-
-  const { data: profile } = await supabase
+  let { data: profile } = await supabase
     .from("profile")
     .select("full_name, email")
     .eq("user_id", user.id)
     .maybeSingle()
+
+  // Defence-in-depth: if the signup trigger never fired for this account, seed
+  // the base rows now and re-read. In the normal case the row already exists,
+  // so this costs one SELECT and no writes per request.
+  if (!profile) {
+    await ensureAccountInitialized(supabase, user)
+    ;({ data: profile } = await supabase
+      .from("profile")
+      .select("full_name, email")
+      .eq("user_id", user.id)
+      .maybeSingle())
+  }
 
   const name = profile?.full_name ?? null
   const email = profile?.email ?? user.email ?? ""

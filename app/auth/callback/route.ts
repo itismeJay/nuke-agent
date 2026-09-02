@@ -17,24 +17,18 @@ export async function GET(request: NextRequest) {
   const redirectTo = safeRedirect(searchParams.get("redirectTo"))
 
   if (errorDescription) {
-    return NextResponse.redirect(
-      `${origin}/sign-in?error=${encodeURIComponent("Sign-in was cancelled or failed.")}`,
-    )
+    return NextResponse.redirect(`${origin}/sign-in?error=oauth_failed`)
   }
 
   if (!code) {
-    return NextResponse.redirect(
-      `${origin}/sign-in?error=${encodeURIComponent("Invalid sign-in link.")}`,
-    )
+    return NextResponse.redirect(`${origin}/sign-in?error=link_invalid`)
   }
 
   const supabase = await createClient()
   const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
   if (error) {
-    return NextResponse.redirect(
-      `${origin}/sign-in?error=${encodeURIComponent("This link has expired. Try again.")}`,
-    )
+    return NextResponse.redirect(`${origin}/sign-in?error=link_expired`)
   }
 
   if (data.user) {

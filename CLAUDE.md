@@ -40,26 +40,29 @@ Path alias: `@/*` maps to the repo root (`tsconfig.json`), so `@/lib/...`, `@/co
 
 ## Current state of the codebase vs. the plan
 
-The repo is currently a **fresh create-next-app scaffold** — only `app/` (layout + placeholder home page) exists. `app/layout.tsx` still has the default "Create Next App" metadata.
+**Phase 0 (Engineering Foundation) and Phase 1 (Database, Auth & User Isolation) are COMPLETE** (as of 2026-09-02). Supabase multi-tenant schema + RLS + composite-FK cross-tenant integrity, email/password + Google OAuth (both verified end to end), route protection, Vitest unit layer, GitHub Actions CI, Actions→Vercel deploy pipeline. **Phase 2 (Career Profile) is next.**
 
-`docs/project/FOLDER_STRUCTURE.md` describes the *intended* layout (`modules/`, `lib/`, `components/`, `inngest/`, `supabase/migrations/`, `tests/`). **None of those directories exist yet.** Treat that file as direction for new code, not a description of reality. Do not scaffold empty directories to match it.
+`docs/project/CURRENT_STATE.md` is the live snapshot — read it first. `docs/project/BUILD_PLAN.md` is the phase-by-phase execution contract (re-baselined 2026-09-02: manual application loop first, Phases 0–8 = first MVP; Inngest/Browserbase/autonomous automation layered on after). `docs/project/DECISIONS.md` D-014…D-020 hold the current product direction. `docs/project/logs/YYYY-MM-DD.md` are dated checkpoints written by `/remember`.
 
-Roadmap is in `docs/project/BUILD_PLAN.md` (Phases 0–19). Phase 0 (Engineering Foundation) is mostly done; **Phase 1 (Database & Authentication) is in progress** — Supabase multi-tenant schema, RLS, email/password + Google OAuth. `docs/project/CURRENT_STATE.md` is the live snapshot; `docs/project/logs/YYYY-MM-DD.md` are dated checkpoints written by `/remember`.
+`docs/project/FOLDER_STRUCTURE.md` describes an *intended* layout that predates the current structure (it names `modules/`, `inngest/`, `tests/` — none exist yet; actual code lives in `lib/`, `components/`, `app/`, `supabase/migrations/`). Treat it as loose direction, not reality. Do not scaffold empty directories to match it.
+
+**Not in the repo yet (planned, do not describe as implemented):** Inngest (Phase 3), Supabase Storage buckets (Phase 3/7), AI provider abstraction (Phase 3+), Brave Search (Phase 4), Browserbase/Stagehand (Phase 10), Stripe (Phase 13).
 
 ## Intended architecture (from `docs/project/ARCHITECTURE.md`)
 
-Modular monolith. Next.js owns UI and synchronous server behavior; domain logic lives in per-domain `modules/`. Supabase = Postgres + Auth + RLS + private Storage. Inngest = durable/scheduled/retryable background workflows (nothing long-running in an HTTP request). Deterministic code (not AI) computes authoritative match scores; AI only parses/rewrites constrained unstructured content. Browserbase drives interactive application submission.
+Modular monolith. Next.js owns UI and synchronous server behavior. Supabase = Postgres + Auth + RLS + private Storage. Inngest = durable/scheduled/retryable background workflows (nothing long-running in an HTTP request) — planned, enters the repo in Phase 3. Deterministic code (not AI) computes authoritative match scores; AI only parses/rewrites constrained unstructured content. Browserbase drives **user-initiated, user-submitted** assisted applications (Phase 10); unattended autonomous submission is postponed (D-014).
 
 Do **not** introduce microservices, Redis, Kafka, Kubernetes, or a second database without a concrete operational requirement (see `docs/project/DECISIONS.md`).
 
 ### Critical invariants to preserve (full list in `ARCHITECTURE.md`)
 
-- One user can never read another user's private data (enforce with RLS server-side, not just UI).
-- Master resumes are immutable; tailoring produces new versioned artifacts.
+- One user can never read another user's private data — RLS server-side **and** composite `(id, user_id)` FKs so a child row can't point at another tenant's parent (D-018).
+- Master resumes are immutable; resume import produces reviewed proposals (never a silent overwrite); tailoring produces new versioned artifacts.
+- The Career Profile is the source of truth and works with zero resume uploads (D-020).
 - Generated resume claims must trace to trusted profile facts — never fabricate professional facts or sensitive application answers.
 - Application history is append-only; historical snapshots never change.
 - Retries must be idempotent — never cause a duplicate job application.
-- Auto Apply requires explicit user rules and a global kill switch.
+- The user controls final submission; Assisted Apply pauses for review. Autonomous Auto Apply is postponed and, when built, needs explicit rules + a global kill switch.
 - Secrets never reach client code.
 
 ## Workflows
