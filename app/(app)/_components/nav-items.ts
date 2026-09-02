@@ -1,10 +1,10 @@
 import type { LucideIcon } from "lucide-react"
 import {
   BriefcaseIcon,
+  CreditCardIcon,
   FileTextIcon,
-  LayoutDashboardIcon,
-  SendIcon,
-  SettingsIcon,
+  ListChecksIcon,
+  Settings2Icon,
   UserIcon,
 } from "lucide-react"
 
@@ -14,14 +14,16 @@ export type NavItem = {
   icon: LucideIcon
 }
 
+/** Primary product sections, in workflow order. */
 export const primaryNav: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboardIcon },
   { href: "/jobs", label: "Jobs", icon: BriefcaseIcon },
-  { href: "/applications", label: "Applications", icon: SendIcon },
-  { href: "/resumes", label: "Resumes", icon: FileTextIcon },
+  { href: "/resumes", label: "Resume", icon: FileTextIcon },
   { href: "/profile", label: "Profile", icon: UserIcon },
+  { href: "/applications", label: "Application Status", icon: ListChecksIcon },
 ]
 
-export const secondaryNav: NavItem[] = [
-  { href: "/settings", label: "Settings", icon: SettingsIcon },
+/** Account-level entries pinned to the sidebar footer. */
+export const footerNav: NavItem[] = [
+  { href: "/billing", label: "Billing / Credits", icon: CreditCardIcon },
+  { href: "/settings", label: "Profile Settings", icon: Settings2Icon },
 ]

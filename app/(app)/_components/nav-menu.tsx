@@ -9,7 +9,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
-import { primaryNav, secondaryNav, type NavItem } from "./nav-items"
+import { footerNav, primaryNav, type NavItem } from "./nav-items"
 
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
@@ -42,6 +42,6 @@ export function PrimaryNavMenu() {
   return <NavMenu items={primaryNav} />
 }
 
-export function SecondaryNavMenu() {
-  return <NavMenu items={secondaryNav} />
+export function FooterNavMenu() {
+  return <NavMenu items={footerNav} />
 }
