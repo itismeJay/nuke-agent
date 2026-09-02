@@ -158,3 +158,24 @@ Profile is the system of record and must be fully usable with zero uploads. A
 non-closable "upload before continuing" gate is **not** how Nook onboards.
 Resume import is a convenience that produces *reviewed* proposals, never a
 silent overwrite (see D-002, D-003).
+
+## D-021 — Skills are a shared canonical catalog, not per-user rows
+**Status:** Accepted (2026-09-03)
+
+The Phase 1 placeholder `skill` table was per-user (`skill.user_id`,
+`skill.profile_id`, free text). Phase 2 reshapes it into a **shared catalog**
+(one row per distinct skill, `name` + unique `slug` + `category`), readable by
+every authenticated user like `job` (D-017), append-only for them. A user's
+skills live in `profile_skill (profile_id, skill_id, proficiency,
+years_experience)`; a project's in `project_skill`.
+
+Rationale: deterministic Phase 5 match scoring compares a job's required skills
+against the profile's skills — a shared vocabulary makes that an id join instead
+of fuzzy text matching across tenants. Server actions normalise on write
+(`slugifySkill`: `+`→`p`, `#`→`sharp`, else dashes) and upsert on `slug`, so
+"React", "react" and " React " collapse to one row. `unique (profile_id,
+skill_id)` prevents duplicates per profile.
+
+The catalog is seeded with ~100 common skills in the migration and grows from
+user input. Curation / merge / rename is a future service-role / admin concern —
+there is no moderation UI yet.

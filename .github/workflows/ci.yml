@@ -68,6 +68,35 @@ jobs:
       - run: npm run build
 
   # ---------------------------------------------------------------------------
+  # Database gate: tenant-isolation / RLS tests against a real Postgres.
+  # Spins up the local Supabase stack (migrations auto-applied), then runs the
+  # SQL assertions in tests/db/ — B cannot touch A's rows, composite FKs reject
+  # cross-tenant children, anon sees nothing. See docs/project/CICD.md.
+  # ---------------------------------------------------------------------------
+  db-tests:
+    name: Tenant isolation (RLS + composite FK)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Start local Supabase (migrations auto-applied)
+        run: npx supabase start -x studio,imgproxy,edge-runtime,logflare,vector
+      - name: Tenant-isolation tests
+        env:
+          SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: npm run test:db
+      - name: Stop local Supabase
+        if: always()
+        run: npx supabase stop --no-backup
+
+  # ---------------------------------------------------------------------------
   # Security gate: secret scan + dependency audit. Parallel with the above.
   # ---------------------------------------------------------------------------
   security:
@@ -100,7 +129,7 @@ jobs:
   # ---------------------------------------------------------------------------
   deploy-preview:
     name: Deploy preview
-    needs: [quality, build, security]
+    needs: [quality, build, security, db-tests]
     if: >-
       github.event_name == 'pull_request' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
@@ -158,7 +187,7 @@ jobs:
   # ---------------------------------------------------------------------------
   deploy-production:
     name: Deploy production
-    needs: [quality, build, security]
+    needs: [quality, build, security, db-tests]
     if: >-
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&

@@ -227,36 +227,32 @@ So schema changes are done in three phases, deployed separately:
 Never collapse these into one step for a column that is currently read in
 production.
 
-### RLS / tenant-isolation tests (planned)
+### RLS / tenant-isolation tests — **built (2026-09-03)**
 
 Nook's security depends on Postgres RLS **and** on composite `(id, user_id)`
-foreign keys (D-018, migration `20260902101500`), so CI should eventually assert
-both directly:
+foreign keys (D-018), so CI asserts both directly.
+
+`db-tests` job (`.github/workflows/ci.yml`): `npx supabase start` (migrations
+auto-applied), then `npm run test:db` — `tests/db/isolation.test.ts` connects to
+the local Postgres as `postgres` and impersonates `authenticated` / `anon` with
+`SET LOCAL ROLE` + `request.jwt.claims`, each assertion in a rolled-back
+transaction:
 
 ```
-User A inserts a private row
-User B SELECT  → 0 rows
-User B UPDATE  → 0 rows affected, A's row intact
-User B DELETE  → 0 rows affected
-anon SELECT    → 0 rows
-User B inserts a child row with user_id = B, profile_id = A  → foreign_key_violation
+a tenant creates its own profile children              → allowed
+User B SELECT / UPDATE / DELETE on User A's rows        → invisible / 0 rows
+User B child (user_id=B, parent_id=A's)                 → foreign_key_violation (23503)
+RLS WITH CHECK, insert row owned by A                   → insufficient_privilege (42501)
+anon SELECT on private tables / skill catalog           → 0 rows
+skill catalog UPDATE / DELETE as authenticated          → 0 rows (append-only)
 ```
 
-Tracked as **TECH_DEBT TD-005**.
+The job is a `needs:` of both deploy jobs. **Normal CI never needs production
+credentials for this.** Chosen approach: Supabase CLI local stack (Docker on the
+runner) over a shared test project — hermetic, free, no live credential.
 
-Options and trade-offs:
-
-| Approach | Pros | Cons |
-|---|---|---|
-| **Supabase CLI local stack** in CI (Docker on the runner) | real Postgres + real policies; free; hermetic; no shared state | needs the CLI + Docker in CI; migrations must apply cleanly from scratch; ~1–2 min startup |
-| **Dedicated free test Supabase project** | closest to prod PostgREST behaviour; no Docker | shared mutable state between runs; rate limits; a live credential in CI |
-| **Staging environment** | end-to-end realistic | most infra; overkill now |
-
-**Recommendation:** Supabase CLI local stack, added as its own `db-tests` job
-that runs `supabase start`, applies `supabase/migrations/`, seeds two users, and
-runs the isolation assertions. **Normal CI never needs production credentials
-for this.** Not built yet — it is the main gap between "preview" and "initial
-production".
+Tracked as **TECH_DEBT TD-005** (now resolved). Remaining: a `gen:types` +
+`git diff --exit-code` step so a schema/types drift also fails CI (TD-003).
 
 ---
 
@@ -417,7 +413,7 @@ One-time:
 | **Unit** — pure/deterministic logic (redirect safety, auth error mapping, `cn`, later: match scoring, transforms, validation) | Vitest (`node` env) | `quality` job, always | ✅ **now** — `lib/**/*.test.ts` |
 | **Component** — React components with RTL + jsdom | Vitest + `@testing-library/react` | `quality` job | later, when component logic is non-trivial |
 | **Integration** — server actions, Supabase client behaviour | Vitest against a local Supabase stack | own `db-tests` job | later |
-| **Authorization / RLS isolation** — two-user SELECT/UPDATE/DELETE denial | SQL assertions vs local Supabase stack | own `db-tests` job | later — **gates "initial production"** |
+| **Authorization / RLS isolation** — two-user SELECT/UPDATE/DELETE denial + composite FK | SQL assertions vs local Supabase stack (`tests/db/isolation.test.ts`) | `db-tests` job | **built 2026-09-03** |
 | **E2E** — sign-up → dashboard, apply flow | Playwright vs the preview URL | after `deploy-preview` | later |
 
 Principle: not every behaviour is an E2E test. Push logic down to unit tests;

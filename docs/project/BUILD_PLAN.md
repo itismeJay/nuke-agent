@@ -126,7 +126,12 @@ Sign up with email/password **and** Google, land on a protected dashboard, signe
 
 # Phase 2 — Career Profile
 
-**Status:** NOT STARTED — **next phase**
+**Status:** COMPLETE (2026-09-03) — pending human acceptance
+
+Migration `20260902192324_career_profile_schema`. Skills are a **shared
+canonical catalog** (D-021). Supabase CLI + local stack now wired
+(`supabase/config.toml`), fixing hand-maintained types (TD-003) and enabling
+the tenant-isolation test layer (TD-005).
 
 ## Goal
 
@@ -134,49 +139,54 @@ Build the central trusted Career Profile. It must work even if the user never up
 
 ## Data (review actual schema before creating duplicates)
 
-- [ ] profile / personal information (extend existing `profile`)
-- [ ] experiences
-- [ ] experience achievements
-- [ ] canonical skills + user/profile skills (normalize; replace the current denormalized `skill.profile_id` shape)
-- [ ] projects
-- [ ] project skills
-- [ ] education
-- [ ] certifications
-- [ ] career preferences
-- [ ] reusable application answers
-- [ ] provenance/source fields where useful (manual vs imported)
+- [x] profile / personal information (extended `profile`: headline, phone, summary, links, source, updated_at)
+- [x] experiences (extended: location, employment_type, source, updated_at, date-order + composite `(id, user_id)`)
+- [x] experience achievements (`experience_achievement`)
+- [x] canonical skills + user/profile skills — `skill` reshaped into a shared catalog (name/slug/category); `profile_skill` join with proficiency/years (D-021)
+- [x] projects (extended: role, start/end date, source; `tech_stack` dropped in favour of the join)
+- [x] project skills (`project_skill`)
+- [x] education (extended: field_of_study, grade, description, source, updated_at)
+- [x] certifications (`certification`)
+- [x] career preferences (`career_preferences`, 1:1 with user)
+- [x] reusable application answers (`application_answer`, `is_sensitive` flag)
+- [x] provenance/source fields — `source` (`manual`/`resume_import`/`ai_suggested`/`oauth`) on every user-authored table
 
 ## Security
 
-- [ ] RLS on every new user-owned table (`user_id = (select auth.uid())`, `to authenticated`)
-- [ ] composite `(id, user_id)` FK pattern on every parent/child relationship (D-018)
-- [ ] ownership + cross-tenant tests (see below)
-- [ ] sensitive application answers handled explicitly (no fabrication downstream)
+- [x] RLS "own rows" on every new user-owned table (`user_id = (select auth.uid())`, `to authenticated`); `skill` catalog = authenticated read + append
+- [x] composite `(id, user_id)` FK on every parent/child edge (D-018): profile→{prefs,skill,cert,answer}, experience→achievement, project→project_skill
+- [x] ownership + cross-tenant tests — `tests/db/isolation.test.ts`, `db-tests` CI job (TD-005)
+- [x] sensitive application answers stored + flagged; no downstream consumer in Phase 2 (invariant 7 respected)
 
 ## UI
 
-- [ ] `/profile` with editable sections: personal info, experience CRUD, achievements, skills, projects, education, certifications, career preferences, application answers
-- [ ] profile completeness indicator
-- [ ] manual edits always possible
+- [x] `/profile` — single page, anchored section nav + completeness meter; personal info, experience CRUD + achievements, skills, projects, education, certifications, preferences, application answers
+- [x] profile completeness indicator (`lib/profile/completeness.ts`; on `/profile` and the dashboard)
+- [x] manual edits always possible — every section independent, every field optional
 
 ## Domain behavior
 
-- [ ] current employment supported (null end date)
-- [ ] duplicate skills normalized / prevented
-- [ ] project ↔ skill association
-- [ ] partial profiles fully supported
+- [x] current employment supported ("I currently work here" → null end date)
+- [x] duplicate skills prevented — slug-normalised catalog + `unique (profile_id, skill_id)`
+- [x] project ↔ skill association (`project_skill`)
+- [x] partial profiles fully supported — no cross-section requirements
 
 ## Tests
 
-- [ ] User A parent + User A child → allowed
-- [ ] User B parent + User B child → allowed
-- [ ] User B child + User A parent → **rejected** (composite FK)
-- [ ] User B SELECT / UPDATE / DELETE User A → rejected / invisible
-- [ ] Zod validation on every Server Action boundary
+- [x] User A parent + User A child → allowed
+- [x] User B parent + User B child → allowed
+- [x] User B child + User A parent → **rejected** (composite FK, code 23503)
+- [x] User B SELECT / UPDATE / DELETE User A → rejected / invisible
+- [x] anon sees no private rows and no skill catalog
+- [x] Zod validation on every Server Action boundary (`lib/profile/schemas.ts` + `schemas.test.ts`)
 
 ## Done when
 
-A user can accurately represent their complete professional background without uploading a resume, every private record is tenant-isolated, and cross-tenant child inserts are rejected by the database.
+A user can accurately represent their complete professional background without uploading a resume, every private record is tenant-isolated, and cross-tenant child inserts are rejected by the database. ✅
+
+**Deferred (not Phase 2):** resume import / parsing (Phase 3), AI skill/achievement
+suggestions (Phase 3+), a guided first-run onboarding wizard, profile edit
+history/versioning, profile export.
 
 ---
 

@@ -5,7 +5,9 @@ ref `lemtlbepgrkltkmjbmqy`, region `ap-northeast-1`).
 
 These `.sql` files are the checked-in record of migrations already applied to the
 remote project. They are ordered by the `YYYYMMDDHHMMSS` timestamp prefix and
-match `supabase_migrations.schema_migrations` on the remote.
+match `supabase_migrations.schema_migrations` on the remote **and** the version
+recorded by the local CLI stack — keep the filename prefix equal to the applied
+version.
 
 | Version | Name | Purpose |
 | --- | --- | --- |
@@ -13,15 +15,30 @@ match `supabase_migrations.schema_migrations` on the remote.
 | `20260901003144` | `harden_functions` | `security invoker` + pinned `search_path`, revoke EXECUTE from client roles |
 | `20260901014234` | `per_user_job_status` | Move per-user job lifecycle state onto `job_analysis` |
 | `20260901093525` | `idempotent_account_initialization` | `on conflict do nothing` in `handle_new_user` |
-| `20260902101500` | `tenant_scoped_child_fks` | Composite `(id, user_id)` keys + `(child_id, user_id)` FKs so child rows cannot reference another tenant's parent |
+| `20260902034701` | `tenant_scoped_child_fks` | Composite `(id, user_id)` keys + `(child_id, user_id)` FKs so child rows cannot reference another tenant's parent |
+| `20260902192324` | `career_profile_schema` | Phase 2: Career Profile tables, shared `skill` catalog, `source` provenance, RLS + composite FKs on every new user-owned table |
+
+## Local development
+
+```bash
+npm run db:start     # supabase start — local stack, migrations auto-applied
+npm run db:reset     # replay every migration from scratch onto the local DB
+npm run test:db      # tenant-isolation tests against the local DB
+npm run gen:types    # regenerate lib/supabase/database.types.ts from the local stack
+```
+
+`supabase/config.toml` is committed; `.branches/` and `.temp/` are ignored.
 
 ## Applying new migrations
 
-There is no local Supabase CLI stack wired up yet. New migrations are applied to
-the remote project (via the Supabase MCP `apply_migration`, or the dashboard SQL
-editor) and the exact SQL is committed here with the assigned version prefix.
+Author the file here (`<version>_<name>.sql`), validate locally with
+`npm run db:reset`, then apply to the remote project — via the Supabase MCP
+`apply_migration` or `supabase db push`. **The MCP assigns its own version
+timestamp**; rename the local file to match what `list_migrations` reports so the
+local and remote histories stay identical.
 
 ## Regenerating types
 
-`lib/supabase/database.types.ts` is generated from the remote schema. Regenerate
-it whenever a migration changes tables/columns.
+`lib/supabase/database.types.ts` — `npm run gen:types` (local stack), or from the
+remote with `SUPABASE_ACCESS_TOKEN` set. Regenerate whenever a migration changes
+tables/columns.

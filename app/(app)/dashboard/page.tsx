@@ -15,8 +15,10 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@/components/ui/empty"
+import { Progress } from "@/components/ui/progress"
 import { requireUser } from "@/lib/auth/user"
 import { createClient } from "@/lib/supabase/server"
+import { loadProfileCompleteness } from "@/lib/profile/queries"
 
 import { PageShell } from "../_components/page-shell"
 
@@ -26,26 +28,15 @@ export default async function DashboardPage() {
   const user = await requireUser()
   const supabase = await createClient()
 
-  const [{ data: profile }, { count: experienceCount }, { data: settings }] =
-    await Promise.all([
-      supabase
-        .from("profile")
-        .select("full_name")
-        .eq("user_id", user.id)
-        .maybeSingle(),
-      supabase
-        .from("experience")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id),
-      supabase
-        .from("agent_settings")
-        .select("enabled")
-        .eq("user_id", user.id)
-        .maybeSingle(),
-    ])
+  const [{ data: profile }, { data: settings }, completeness] = await Promise.all([
+    supabase.from("profile").select("full_name").eq("user_id", user.id).maybeSingle(),
+    supabase.from("agent_settings").select("enabled").eq("user_id", user.id).maybeSingle(),
+    loadProfileCompleteness(),
+  ])
 
   const firstName = profile?.full_name?.split(/\s+/)[0]
-  const hasExperience = (experienceCount ?? 0) > 0
+  const started = completeness.score > 0
+  const nextSection = completeness.sections.find((section) => !section.complete)
 
   return (
     <PageShell
@@ -56,17 +47,25 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>
-              {hasExperience ? "Keep your profile current" : "Build your Career Profile"}
+              {started ? "Your Career Profile" : "Build your Career Profile"}
             </CardTitle>
             <CardDescription>
-              {hasExperience
-                ? "Your profile has experience on it. Add skills, projects, and preferences to improve future matching."
-                : "The Career Profile is the trusted source of truth for matching and tailoring. It works even without uploading a resume."}
+              {started
+                ? nextSection
+                  ? `Next up: ${nextSection.label}.`
+                  : "Your profile covers every section. Keep it current as things change."
+                : "The trusted source of truth for matching and tailoring. It works even without uploading a resume."}
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Button render={<Link href="/profile" />}>
-              {hasExperience ? "Review profile" : "Start your profile"}
+          <CardContent className="flex flex-col gap-3">
+            <div className="flex items-center gap-3">
+              <Progress value={completeness.score} className="block flex-1" />
+              <span className="text-sm tabular-nums text-muted-foreground">
+                {completeness.score}%
+              </span>
+            </div>
+            <Button render={<Link href="/profile" />} className="w-fit">
+              {started ? "Continue your profile" : "Start your profile"}
             </Button>
           </CardContent>
         </Card>

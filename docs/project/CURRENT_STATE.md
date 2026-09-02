@@ -1,11 +1,11 @@
 # Nook — Current State
 
-_Last updated: 2026-09-02_
+_Last updated: 2026-09-03_
 
 ## Current Phase
 
-**Phase 1 — Database, Authentication & User Isolation: COMPLETE.**
-Next: **Phase 2 — Career Profile.**
+**Phase 2 — Career Profile: COMPLETE** (pending human acceptance).
+Next: **Phase 3 — Master Resume Import, Re-import & Inngest Resume Processing.**
 
 Product direction was re-baselined on 2026-09-02: ship the **manual** application
 loop first (Phases 0–8), layer Assisted Apply (Browserbase, Phase 10) and
@@ -15,10 +15,37 @@ Auto Apply to Future Optional. See `BUILD_PLAN.md` and `DECISIONS.md` D-014…D-
 ## What works (Implemented)
 
 - **Supabase project** `nook-agent` (`lemtlbepgrkltkmjbmqy`, `ap-northeast-1`):
-  5 migrations applied + vendored to `supabase/migrations/`, 11 public tables,
+  6 migrations applied + vendored to `supabase/migrations/`, 17 public tables,
   RLS enabled + policy-audited, ownership indexes, idempotent `handle_new_user`
   signup trigger. Security advisors clean except the known
-  leaked-password-protection warning (TECH_DEBT).
+  leaked-password-protection warning (TECH_DEBT). **Supabase CLI + local stack
+  wired** (`supabase/config.toml`, `major_version = 17`); `npm run db:reset` /
+  `db:start` / `gen:types`.
+- **Career Profile (Phase 2)** — migration `20260902192324_career_profile_schema`:
+  - `profile` extended (headline, phone, summary, `links` jsonb, `source`,
+    `updated_at`); `target_roles`/`target_locations` moved out.
+  - New tables: `career_preferences` (1:1), `experience_achievement`,
+    `profile_skill`, `project_skill`, `certification`, `application_answer`.
+    `experience` / `project` / `education` extended; `experience` & `project`
+    gained composite `(id, user_id)` unique keys.
+  - **`skill` is now a shared canonical catalog** (name / unique slug / category),
+    authenticated read + append, ~100 seeded (D-021). `profile_skill` /
+    `project_skill` join with proficiency + years.
+  - `source` provenance (`manual` / `resume_import` / `ai_suggested` / `oauth`)
+    on every user-authored table; `set_updated_at` triggers throughout.
+  - RLS "own rows" on all 6 new user-owned tables; composite `(id, user_id)` FKs
+    on every parent→child edge (D-018).
+  - `/profile` — one page, anchored section nav + completeness meter, full CRUD
+    for personal info, experience + achievements, skills, projects, education,
+    certifications, preferences, application answers. `is_sensitive` answers
+    flagged; nothing auto-submitted. Dashboard shows real completeness.
+  - `lib/profile/` — `schemas.ts` (Zod at every action boundary), `actions.ts`
+    (server actions; `user_id`/`profile_id` resolved server-side, never from the
+    client), `queries.ts`, `completeness.ts`, `skills.ts`, `owner.ts`.
+  - **Tenant-isolation test layer** — `tests/db/isolation.test.ts` +
+    `npm run test:db` + `db-tests` CI job (TD-005 resolved). Verified live via
+    SQL role simulation: cross-tenant child insert → `foreign_key_violation`;
+    B cannot read/write A; anon sees nothing.
 - **Cross-tenant relational integrity** (`20260902101500_tenant_scoped_child_fks`):
   `experience`, `project`, `skill`, `education`, `master_resume`, `application`
   now carry `user_id` in their FK to the parent and reference a composite
@@ -50,11 +77,14 @@ Auto Apply to Future Optional. See `BUILD_PLAN.md` and `DECISIONS.md` D-014…D-
 - **UI:** Nook design tokens (light/dark via `next-themes`), shadcn/base-ui
   primitives, marketing landing, split-layout auth screens, authenticated app
   shell (sidebar + mobile drawer + user menu).
-- **Engineering:** Vitest unit layer (25 tests: redirect safety, auth-error
-  mapping, `cn`), `npm run typecheck`, GitHub Actions CI (lint / typecheck /
-  test / build / gitleaks / `npm audit` / CodeQL), `dependabot.yml`,
-  Actions-controlled Vercel deploy pipeline (inert until `DEPLOY_ENABLED=true`).
-  Full design in `docs/project/CICD.md`.
+- **Engineering:** Vitest unit layer (54 tests: redirect/auth-error mapping,
+  `cn`, profile completeness + skill slugify + every Zod schema) **plus a DB
+  layer** (`npm run test:db`, 7 tenant-isolation tests against the local
+  Supabase stack). `npm run typecheck`, GitHub Actions CI (lint / typecheck /
+  test / **db-tests** / build / gitleaks / `npm audit` / CodeQL),
+  `dependabot.yml`, Actions-controlled Vercel deploy pipeline (inert until
+  `DEPLOY_ENABLED=true`) now gated on `db-tests` too. Full design in
+  `docs/project/CICD.md`.
 
 ## Planned (not yet in the repo)
 
@@ -68,19 +98,21 @@ Auto Apply to Future Optional. See `BUILD_PLAN.md` and `DECISIONS.md` D-014…D-
 - **Brave Search** — manual job discovery, Phase 4.
 - **Browserbase + Stagehand** — Assisted Apply, Phase 10. Not installed.
 - **Stripe** — Phase 13, after cost measurement.
-- Normalized Career Profile tables, shared Job/Company model, `job_match`,
-  `application` + snapshots + events — Phases 2, 4, 5, 8.
+- Shared Job/Company model, `job_match`, `application` + snapshots + events —
+  Phases 4, 5, 8.
 
 ## Blockers
 
-- None. Phase 1 is closed.
+- None. Phase 2 is closed; Phase 3 (resume import + Inngest) is next.
 
 ## Active architecture
 
 - Next.js 16 (App Router, Turbopack) modular monolith · React 19 · TS strict
 - Tailwind v4 + shadcn/ui (base-ui variant) · `next-themes`
-- Supabase Postgres + Auth + RLS (`lemtlbepgrkltkmjbmqy`)
+- Supabase Postgres + Auth + RLS (`lemtlbepgrkltkmjbmqy`); **Supabase CLI +
+  local stack** (`supabase/config.toml`) for `db reset` / typegen / `test:db`
 - `@supabase/ssr` cookie sessions; `middleware.ts` (not `proxy.ts`, D-012) refresh
+- `zod` for Server Action input validation (added Phase 2)
 - Deployment target: GitHub Actions → Vercel (D-019); **no AWS**
 - Inngest / Browserbase / AI providers / Brave / Stripe: not yet introduced
 
@@ -93,10 +125,11 @@ Auto Apply to Future Optional. See `BUILD_PLAN.md` and `DECISIONS.md` D-014…D-
 
 ## Known gaps (tracked in TECH_DEBT)
 
-- No Prettier (TD-002). No RLS/two-user isolation test in CI yet (TD-002) — the
-  composite-FK invariant is enforced by the database but not asserted by an
-  automated test.
-- `lib/supabase/database.types.ts` regenerated by hand (TD-003).
+- No Prettier (TD-002).
+- Tenant-isolation tests exist (`tests/db/isolation.test.ts`, `db-tests` CI job,
+  TD-005 resolved) but no CI check that `database.types.ts` matches the schema
+  (TD-003 mostly resolved — `npm run gen:types` script exists).
+- `application.mode` enum still `('manual','auto')` — rework in Phase 8 (TD-006).
 - `middleware.ts` on the deprecated Next 16 convention (TD-001).
 - `next build`/`next dev` appends a block to `AGENTS.md` (TD-004).
 

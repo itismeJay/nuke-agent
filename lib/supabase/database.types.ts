@@ -7,10 +7,30 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -79,35 +99,218 @@ export type Database = {
           },
         ]
       }
+      application_answer: {
+        Row: {
+          answer: string | null
+          category: string
+          created_at: string
+          id: string
+          is_sensitive: boolean
+          profile_id: string
+          question: string
+          source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          answer?: string | null
+          category?: string
+          created_at?: string
+          id?: string
+          is_sensitive?: boolean
+          profile_id: string
+          question: string
+          source?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          answer?: string | null
+          category?: string
+          created_at?: string
+          id?: string
+          is_sensitive?: boolean
+          profile_id?: string
+          question?: string
+          source?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "application_answer_profile_id_fkey"
+            columns: ["profile_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      career_preferences: {
+        Row: {
+          availability: string | null
+          created_at: string
+          desired_locations: Json
+          desired_roles: Json
+          employment_types: Json
+          id: string
+          min_salary: number | null
+          notes: string | null
+          open_to_relocation: boolean | null
+          profile_id: string
+          salary_currency: string | null
+          salary_period: string | null
+          seniority: string | null
+          source: string
+          updated_at: string
+          user_id: string
+          work_arrangements: Json
+        }
+        Insert: {
+          availability?: string | null
+          created_at?: string
+          desired_locations?: Json
+          desired_roles?: Json
+          employment_types?: Json
+          id?: string
+          min_salary?: number | null
+          notes?: string | null
+          open_to_relocation?: boolean | null
+          profile_id: string
+          salary_currency?: string | null
+          salary_period?: string | null
+          seniority?: string | null
+          source?: string
+          updated_at?: string
+          user_id: string
+          work_arrangements?: Json
+        }
+        Update: {
+          availability?: string | null
+          created_at?: string
+          desired_locations?: Json
+          desired_roles?: Json
+          employment_types?: Json
+          id?: string
+          min_salary?: number | null
+          notes?: string | null
+          open_to_relocation?: boolean | null
+          profile_id?: string
+          salary_currency?: string | null
+          salary_period?: string | null
+          seniority?: string | null
+          source?: string
+          updated_at?: string
+          user_id?: string
+          work_arrangements?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "career_preferences_profile_id_fkey"
+            columns: ["profile_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      certification: {
+        Row: {
+          created_at: string
+          credential_id: string | null
+          credential_url: string | null
+          expires_on: string | null
+          id: string
+          issued_on: string | null
+          issuer: string | null
+          name: string
+          profile_id: string
+          source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credential_id?: string | null
+          credential_url?: string | null
+          expires_on?: string | null
+          id?: string
+          issued_on?: string | null
+          issuer?: string | null
+          name: string
+          profile_id: string
+          source?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credential_id?: string | null
+          credential_url?: string | null
+          expires_on?: string | null
+          id?: string
+          issued_on?: string | null
+          issuer?: string | null
+          name?: string
+          profile_id?: string
+          source?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "certification_profile_id_fkey"
+            columns: ["profile_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
       education: {
         Row: {
           created_at: string
           degree: string | null
+          description: string | null
           end_date: string | null
+          field_of_study: string | null
+          grade: string | null
           id: string
           institution: string | null
           profile_id: string
+          source: string
           start_date: string | null
+          updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
           degree?: string | null
+          description?: string | null
           end_date?: string | null
+          field_of_study?: string | null
+          grade?: string | null
           id?: string
           institution?: string | null
           profile_id: string
+          source?: string
           start_date?: string | null
+          updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
           degree?: string | null
+          description?: string | null
           end_date?: string | null
+          field_of_study?: string | null
+          grade?: string | null
           id?: string
           institution?: string | null
           profile_id?: string
+          source?: string
           start_date?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: [
@@ -125,33 +328,45 @@ export type Database = {
           company: string | null
           created_at: string
           description: string | null
+          employment_type: string | null
           end_date: string | null
           id: string
+          location: string | null
           profile_id: string
+          source: string
           start_date: string | null
           title: string | null
+          updated_at: string
           user_id: string
         }
         Insert: {
           company?: string | null
           created_at?: string
           description?: string | null
+          employment_type?: string | null
           end_date?: string | null
           id?: string
+          location?: string | null
           profile_id: string
+          source?: string
           start_date?: string | null
           title?: string | null
+          updated_at?: string
           user_id: string
         }
         Update: {
           company?: string | null
           created_at?: string
           description?: string | null
+          employment_type?: string | null
           end_date?: string | null
           id?: string
+          location?: string | null
           profile_id?: string
+          source?: string
           start_date?: string | null
           title?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: [
@@ -160,6 +375,47 @@ export type Database = {
             columns: ["profile_id", "user_id"]
             isOneToOne: false
             referencedRelation: "profile"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      experience_achievement: {
+        Row: {
+          content: string
+          created_at: string
+          experience_id: string
+          id: string
+          sort_order: number
+          source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          experience_id: string
+          id?: string
+          sort_order?: number
+          source?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          experience_id?: string
+          id?: string
+          sort_order?: number
+          source?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "experience_achievement_experience_id_fkey"
+            columns: ["experience_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "experience"
             referencedColumns: ["id", "user_id"]
           },
         ]
@@ -275,62 +531,137 @@ export type Database = {
           created_at: string
           email: string | null
           full_name: string | null
+          headline: string | null
           id: string
+          links: Json
           location: string | null
-          target_locations: Json
-          target_roles: Json
+          phone: string | null
+          source: string
+          summary: string | null
+          updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
           email?: string | null
           full_name?: string | null
+          headline?: string | null
           id?: string
+          links?: Json
           location?: string | null
-          target_locations?: Json
-          target_roles?: Json
+          phone?: string | null
+          source?: string
+          summary?: string | null
+          updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
           email?: string | null
           full_name?: string | null
+          headline?: string | null
           id?: string
+          links?: Json
           location?: string | null
-          target_locations?: Json
-          target_roles?: Json
+          phone?: string | null
+          source?: string
+          summary?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      profile_skill: {
+        Row: {
+          created_at: string
+          id: string
+          proficiency: string | null
+          profile_id: string
+          skill_id: string
+          source: string
+          updated_at: string
+          user_id: string
+          years_experience: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          proficiency?: string | null
+          profile_id: string
+          skill_id: string
+          source?: string
+          updated_at?: string
+          user_id: string
+          years_experience?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          proficiency?: string | null
+          profile_id?: string
+          skill_id?: string
+          source?: string
+          updated_at?: string
+          user_id?: string
+          years_experience?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_skill_profile_id_fkey"
+            columns: ["profile_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "profile_skill_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skill"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       project: {
         Row: {
           created_at: string
           description: string | null
+          end_date: string | null
           id: string
           name: string | null
           profile_id: string
-          tech_stack: Json
+          role: string | null
+          source: string
+          start_date: string | null
+          updated_at: string
           url: string | null
           user_id: string
         }
         Insert: {
           created_at?: string
           description?: string | null
+          end_date?: string | null
           id?: string
           name?: string | null
           profile_id: string
-          tech_stack?: Json
+          role?: string | null
+          source?: string
+          start_date?: string | null
+          updated_at?: string
           url?: string | null
           user_id: string
         }
         Update: {
           created_at?: string
           description?: string | null
+          end_date?: string | null
           id?: string
           name?: string | null
           profile_id?: string
-          tech_stack?: Json
+          role?: string | null
+          source?: string
+          start_date?: string | null
+          updated_at?: string
           url?: string | null
           user_id?: string
         }
@@ -341,6 +672,45 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profile"
             referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      project_skill: {
+        Row: {
+          created_at: string
+          id: string
+          project_id: string
+          skill_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          project_id: string
+          skill_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          project_id?: string
+          skill_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_skill_project_id_fkey"
+            columns: ["project_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "project"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "project_skill_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skill"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -384,35 +754,24 @@ export type Database = {
           category: string | null
           created_at: string
           id: string
-          name: string | null
-          profile_id: string
-          user_id: string
+          name: string
+          slug: string
         }
         Insert: {
           category?: string | null
           created_at?: string
           id?: string
-          name?: string | null
-          profile_id: string
-          user_id: string
+          name: string
+          slug: string
         }
         Update: {
           category?: string | null
           created_at?: string
           id?: string
-          name?: string | null
-          profile_id?: string
-          user_id?: string
+          name?: string
+          slug?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "skill_profile_id_fkey"
-            columns: ["profile_id", "user_id"]
-            isOneToOne: false
-            referencedRelation: "profile"
-            referencedColumns: ["id", "user_id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {
@@ -548,7 +907,11 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
 } as const
+
