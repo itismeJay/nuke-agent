@@ -28,22 +28,22 @@ Create a stable development baseline before product features.
 
 ## Checklist
 
-- [ ] Next.js + TypeScript project runs locally
-- [ ] strict TypeScript configuration
-- [ ] Tailwind configured
-- [ ] shadcn/ui configured where used
-- [ ] light/dark design tokens
-- [ ] environment files ignored from git
-- [ ] `.env.example` documented
-- [ ] formatting configured
-- [ ] lint configured
-- [ ] test runner configured
-- [ ] production build command works
-- [ ] base module/folder structure established
-- [ ] Git repository initialized
-- [ ] basic GitHub CI for install/lint/typecheck/test/build
-- [ ] secret scanning / dependency security baseline
-- [ ] README explains local setup
+- [x] Next.js + TypeScript project runs locally
+- [x] strict TypeScript configuration
+- [x] Tailwind configured
+- [x] shadcn/ui configured where used (base-ui variant, `components.json`)
+- [x] light/dark design tokens (`app/globals.css` + `next-themes`)
+- [x] environment files ignored from git
+- [x] `.env.example` documented
+- [ ] formatting configured (ESLint only; no Prettier)
+- [x] lint configured
+- [x] test runner configured (Vitest, unit layer; `docs/project/CICD.md` → Test Strategy)
+- [x] production build command works
+- [x] base module/folder structure established (`lib/`, `components/`, `app/(auth)`, `app/(app)`, `supabase/`)
+- [x] Git repository initialized
+- [x] basic GitHub CI for install/lint/typecheck/test/build (`.github/workflows/ci.yml`)
+- [x] secret scanning / dependency security baseline (gitleaks + `npm audit` + CodeQL in CI; `dependabot.yml`; GitHub push protection on — Dependabot *alerts* still to enable)
+- [x] README explains local setup
 
 ## Done when
 
@@ -53,85 +53,91 @@ A fresh clone can install dependencies and run the application, tests/checks, an
 
 # Phase 1 — Database & Authentication
 
-**Status:** IN PROGRESS
+**Status:** SUBSTANTIALLY COMPLETE — email/password verified end to end; Google OAuth
+configured and handshake-verified to Google's consent screen, full credential
+round-trip pending the first real Google sign-in.
 
 Everything after this phase assumes authenticated `user_id` ownership and trustworthy tenant isolation.
 
 ## Database
 
-- [ ] Run the initial multi-tenant migration against Supabase
-- [ ] Confirm required tables were created
-- [ ] Confirm `user_id` ownership exists on user-owned records
-- [ ] Verify RLS is actually enabled, not merely that migration succeeded
-- [ ] Review every RLS policy for correct authenticated-user scoping
-- [ ] Add indexes needed for common ownership lookups
+- [x] Run the initial multi-tenant migration against Supabase (4 migrations applied + vendored to `supabase/migrations/`)
+- [x] Confirm required tables were created (11 public tables verified via MCP `list_tables`)
+- [x] Confirm `user_id` ownership exists on user-owned records
+- [x] Verify RLS is actually enabled, not merely that migration succeeded (`pg_policies` audit + live PostgREST test)
+- [x] Review every RLS policy for correct authenticated-user scoping (`user_id = (select auth.uid())`, `to authenticated`; `job` = shared read)
+- [x] Add indexes needed for common ownership lookups (`*_user_id_idx`, `*_profile_id_idx`, `job_analysis (user_id, status)`)
 
 ## Supabase clients
 
-- [ ] Create user-session-scoped server client
-- [ ] Ensure cookie/session JWT is used
-- [ ] Confirm RLS applies for normal app requests
-- [ ] Create admin/service client only if required
-- [ ] Ensure elevated client cannot be imported into client/UI code
-- [ ] Document exactly which trusted background operations may use elevated access
+- [x] Create user-session-scoped server client (`lib/supabase/server.ts`)
+- [x] Ensure cookie/session JWT is used (`@supabase/ssr` cookie adapter + `middleware.ts` refresh)
+- [x] Confirm RLS applies for normal app requests (verified with a real user JWT via PostgREST)
+- [x] Create admin/service client only if required (`lib/supabase/admin.ts` created but gated — throws unless `SUPABASE_SERVICE_ROLE_KEY` set; not needed this phase)
+- [x] Ensure elevated client cannot be imported into client/UI code (`import "server-only"`)
+- [x] Document exactly which trusted background operations may use elevated access (header of `admin.ts`: "none yet")
 
 ## Authentication
 
-- [ ] Enable email/password auth
-- [ ] Decide whether email confirmation is required
-- [ ] Enable Google OAuth
-- [ ] Configure Google Cloud OAuth redirect URIs
-- [ ] Configure Supabase redirect URLs for local and production environments
-- [ ] Build Sign Up
-- [ ] Build Sign In
-- [ ] Build Sign Out
-- [ ] Build forgot/reset password
-- [ ] Add inline validation
-- [ ] Add loading states
-- [ ] Add user-safe authentication errors
+- [x] Enable email/password auth (on by default; verified `email: true`)
+- [x] Decide whether email confirmation is required (decision: **not** required for now; `mailer_autoconfirm: true` verified — revisit before production)
+- [x] Enable Google OAuth (`google: true` verified; provider enabled in Supabase)
+- [x] Configure Google Cloud OAuth redirect URIs (`https://<ref>.supabase.co/auth/v1/callback`; `/authorize` reaches Google account chooser with no `redirect_uri_mismatch`)
+- [x] Configure Supabase redirect URLs for local and production environments (local: Site URL + `http://localhost:3000/**`; production URLs still to add at deploy time)
+- [x] Build Sign Up (`app/(auth)/sign-up`)
+- [x] Build Sign In (`app/(auth)/sign-in`)
+- [x] Build Sign Out (server action `signOut`; verified in browser)
+- [x] Build forgot/reset password (`forgot-password`, `reset-password`, via `/auth/callback`)
+- [x] Add inline validation (`lib/auth/actions.ts` field-level + client)
+- [x] Add loading states (`useFormStatus` pending on submit buttons)
+- [x] Add user-safe authentication errors (`friendlyAuthError` mapping; non-enumerating)
 
 ## Account initialization
 
-- [ ] On successful signup create required `profile` row
-- [ ] Create required `agent_settings` / automation defaults
-- [ ] Initialization is idempotent
-- [ ] Partial initialization failure is handled safely
+- [x] On successful signup create required `profile` row (`handle_new_user` trigger; verified)
+- [x] Create required `agent_settings` / automation defaults (verified: `enabled=false`, `min_match_score=75`, `daily_apply_limit=5`)
+- [x] Initialization is idempotent (`on conflict do nothing` migration + `ensureAccountInitialized` upsert with `ignoreDuplicates`)
+- [x] Partial initialization failure is handled safely (`ensureAccountInitialized` returns `{ok:false}` without hard-failing; re-run on every protected request)
 
 ## Route protection
 
-- [ ] Protect dashboard
-- [ ] Protect profile
-- [ ] Protect resumes
-- [ ] Protect jobs
-- [ ] Protect applications
-- [ ] Protect automation/settings
-- [ ] Signed-out access redirects to login
-- [ ] Signed-in users are redirected away from login/signup where appropriate
+- [x] Protect dashboard
+- [x] Protect profile
+- [x] Protect resumes
+- [x] Protect jobs
+- [x] Protect applications
+- [x] Protect automation/settings (`/settings`)
+- [x] Signed-out access redirects to login (verified: `307 → /sign-in?redirectTo=…`)
+- [x] Signed-in users are redirected away from login/signup where appropriate (`middleware.ts` AUTH_PREFIXES)
 
 ## Security verification
 
-- [ ] Create Account A
-- [ ] Create Account B
-- [ ] Insert private data for Account A
-- [ ] Verify Account B cannot SELECT it
-- [ ] Verify Account B cannot UPDATE it
-- [ ] Verify Account B cannot DELETE it
-- [ ] Verify normal user client cannot bypass RLS
-- [ ] Verify service/admin key is server-only
+- [x] Create Account A
+- [x] Create Account B
+- [x] Insert private data for Account A
+- [x] Verify Account B cannot SELECT it (0 rows)
+- [x] Verify Account B cannot UPDATE it (0 affected; A's row intact)
+- [x] Verify Account B cannot DELETE it (0 affected)
+- [x] Verify normal user client cannot bypass RLS (real JWT via PostgREST returns only own rows; `anon` sees nothing)
+- [x] Verify service/admin key is server-only (`server-only` import; key not set at all)
 
 ## UI
 
-- [ ] Landing page matches Nook design direction
-- [ ] Sign in page polished
-- [ ] Sign up page polished
-- [ ] Password reset states polished
-- [ ] Empty authenticated app shell exists
-- [ ] Sidebar/mobile navigation works
-- [ ] Light/dark themes remain usable
+- [x] Landing page matches Nook design direction (`app/page.tsx` + `app/(marketing)`)
+- [x] Sign in page polished (split layout, `/ui-review` pass done)
+- [x] Sign up page polished
+- [x] Password reset states polished
+- [x] Empty authenticated app shell exists (`app/(app)/layout.tsx`)
+- [x] Sidebar/mobile navigation works (desktop verified in browser; mobile drawer built to the Sheet pattern, not screenshotted — tool renders desktop width only)
+- [x] Light/dark themes remain usable (`next-themes` system default + toggle in user menu)
 
 ## Done when
 
 You can sign up with email/password **and** Google, land on a protected dashboard, signed-out users are redirected to login, base account rows exist, and two test users are proven isolated by RLS.
+
+**Remaining before this is fully closed:** a real Google account sign-in that lands
+on `/dashboard` (verified only to Google's consent screen so far), and production
+redirect URLs when a deploy target exists.
 
 ---
 

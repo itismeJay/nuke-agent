@@ -49,3 +49,35 @@ Production should deploy tested/scanned Docker artifacts, not build source on th
 **Status:** Accepted
 
 Use temporary AWS credentials rather than permanent GitHub-stored AWS access keys.
+
+## D-011 — shadcn/ui (base-ui variant) is the default component library
+**Status:** Accepted (2026-09-01)
+
+Component primitives come from shadcn's `base-nova` style over `@base-ui/react`,
+tracked in `components.json`. Nook's semantic design tokens are mapped onto
+shadcn's token names in `app/globals.css` so the design system stays the source
+of truth. Theming is `next-themes` with `attribute="class"` and `defaultTheme="system"`.
+
+shadcn/ui is the **default** for all UI work — prefer an existing component in
+`components/ui/`, then `npx shadcn add <name>`, and only build a custom primitive
+when shadcn cannot reasonably provide the behavior or it is genuinely
+product-specific. This rule is enforced in `CLAUDE.md`, `docs/design/UI_SYSTEM.md`,
+`.agent/workflows/ui.md`, and `AGENTS.md`. The app shell uses the shadcn
+`sidebar` system; auth forms use `field`; status uses `alert` / `empty`.
+
+## D-012 — Keep the `middleware.ts` convention, not Next 16 `proxy.ts`
+**Status:** Accepted (2026-09-01), revisit on Next upgrade
+
+Next 16 renamed the middleware convention to `proxy.ts` and warns on `middleware.ts`.
+`proxy.ts` throws a phantom "missing expected function export" error in Turbopack
+dev on 16.3.4 even with a correct `export function proxy`, while `middleware.ts`
+works in both dev and production build. Staying on `middleware.ts` (a warning, not
+an error) until the `proxy` dev path is fixed. See TECH_DEBT TD-001.
+
+## D-013 — Email confirmation disabled in development
+**Status:** Accepted for now (2026-09-01), MUST revisit before production
+
+`mailer_autoconfirm` is on (Supabase "Confirm email" off) so email/password signup
+lands straight on the dashboard without a mail round-trip. This is a development
+convenience. Re-enable confirmation before any production launch and verify the
+`/auth/callback` token-exchange path handles the confirmation link.

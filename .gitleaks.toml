@@ -1,0 +1,14 @@
+# Extends gitleaks' built-in ruleset. CI scans git history/PR diffs (where build
+# output never appears), but this keeps local `gitleaks dir .` runs clean too.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Generated / vendored files that never contain real secrets"
+paths = [
+  '''(^|/)\.next/''',
+  '''(^|/)node_modules/''',
+  '''(^|/)coverage/''',
+  '''package-lock\.json$''',
+  '''(^|/)\.env\.example$''',
+]

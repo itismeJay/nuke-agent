@@ -202,6 +202,71 @@ Do not use heavy shadows as the default surface separator.
 
 ---
 
+# Component Library
+
+Nook uses **shadcn/ui** as the primary UI component system (the Base UI variant —
+see `components.json` and `components/ui/`).
+
+## Default rule
+
+Use shadcn/ui components wherever an appropriate component exists.
+
+Examples include:
+
+- Button
+- Input
+- Textarea
+- Label
+- Select
+- Checkbox
+- Radio Group
+- Switch
+- Dialog
+- Alert Dialog
+- Dropdown Menu
+- Popover
+- Tooltip
+- Sheet
+- Drawer
+- Tabs
+- Accordion
+- Card
+- Badge
+- Avatar
+- Separator
+- Skeleton
+- Table
+- Breadcrumb
+- Command
+- Form primitives
+
+Do not recreate these primitives manually unless there is a specific product
+requirement that shadcn/ui cannot satisfy. If the component is not yet installed,
+add it with the shadcn CLI (`npx shadcn add <name>`) rather than rebuilding it.
+
+## Composition over replacement
+
+Prefer:
+
+shadcn primitive
+→ Nook styling
+→ reusable Nook component
+
+instead of:
+
+custom primitive built from scratch
+
+For example:
+
+shadcn Button
+→ Nook button variants
+→ PrimaryButton / destructive action / icon button
+
+The design system may customize spacing, radius, typography, states, and motion
+while preserving the underlying shadcn component behavior and accessibility.
+
+---
+
 # Buttons
 
 Use clear hierarchy:

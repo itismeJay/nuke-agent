@@ -28,6 +28,20 @@ If screenshots or visual references are supplied in the conversation, inspect th
 
 Do not copy another product pixel-for-pixel.
 
+## Component Library Requirement
+
+Use shadcn/ui as the default component library (this repo uses the Base UI variant).
+
+Before creating custom UI primitives, inspect the existing `components/ui`
+directory and determine whether an appropriate shadcn/ui component already exists.
+
+If the required shadcn component is not installed, add it with the shadcn CLI
+(`npx shadcn add <name>`) rather than rebuilding the primitive manually.
+
+Prefer composition and customization of shadcn components over custom replacements.
+Only build a custom primitive when shadcn cannot reasonably provide the required
+behavior, or the behavior is genuinely product-specific.
+
 ## Preserve functionality
 
 Before editing identify:

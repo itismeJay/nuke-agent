@@ -1,0 +1,30 @@
+# Dependency update PRs. Security *alerts* (and auto security-patch PRs) are a
+# separate repo setting enabled via the GitHub API / Settings → Code security.
+version: 2
+updates:
+  # Application + tooling dependencies.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      # One PR for the low-risk stuff so the queue stays readable.
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    # Majors still come as individual PRs — they need a human read.
+    labels:
+      - dependencies
+
+  # The versions pinned inside .github/workflows/*.yml (actions/checkout, etc.).
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    labels:
+      - dependencies
+      - ci
