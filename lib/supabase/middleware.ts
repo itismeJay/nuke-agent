@@ -11,6 +11,7 @@ const PROTECTED_PREFIXES = [
   "/resumes",
   "/jobs",
   "/applications",
+  "/billing",
   "/settings",
 ]
 

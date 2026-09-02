@@ -2,11 +2,11 @@ import { cookies } from "next/headers"
 
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
-import { Wordmark } from "@/components/brand/wordmark"
 import { ensureAccountInitialized } from "@/lib/auth/account"
 import { requireUser } from "@/lib/auth/user"
 import { createClient } from "@/lib/supabase/server"
 
+import { AppBrand } from "./_components/app-brand"
 import { AppSidebar } from "./_components/app-sidebar"
 
 export default async function AppLayout({
@@ -40,7 +40,7 @@ export default async function AppLayout({
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4 md:hidden">
           <SidebarTrigger />
           <Separator orientation="vertical" className="mr-1 h-4" />
-          <Wordmark href="/dashboard" />
+          <AppBrand href="/dashboard" />
         </header>
         {children}
       </SidebarInset>

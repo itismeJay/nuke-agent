@@ -1,16 +1,20 @@
-import { Wordmark } from "@/components/brand/wordmark"
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
+  SidebarRail,
+  SidebarSeparator,
 } from "@/components/ui/sidebar"
 
-import { PrimaryNavMenu, SecondaryNavMenu } from "./nav-menu"
+import { AppBrand } from "./app-brand"
+import { CreditsCard } from "./credits-card"
+import { FooterNavMenu, PrimaryNavMenu } from "./nav-menu"
 import { UserMenu } from "./user-menu"
 
 export function AppSidebar({
@@ -21,31 +25,32 @@ export function AppSidebar({
   name: string | null
 }) {
   return (
-    <Sidebar>
+    <Sidebar collapsible="icon">
       <SidebarHeader>
         <SidebarMenu>
-          <SidebarMenuItem className="px-2 py-1.5">
-            <Wordmark href="/dashboard" />
+          <SidebarMenuItem className="px-1.5 py-1">
+            <AppBrand href="/dashboard" />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
+          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
           <SidebarGroupContent>
             <PrimaryNavMenu />
           </SidebarGroupContent>
         </SidebarGroup>
-        <SidebarGroup className="mt-auto">
-          <SidebarGroupContent>
-            <SecondaryNavMenu />
-          </SidebarGroupContent>
-        </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter>
+      <SidebarFooter className="gap-3">
+        <CreditsCard />
+        <FooterNavMenu />
+        <SidebarSeparator className="mx-0" />
         <UserMenu email={email} name={name} />
       </SidebarFooter>
+
+      <SidebarRail />
     </Sidebar>
   )
 }
