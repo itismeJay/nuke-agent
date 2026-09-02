@@ -12,7 +12,8 @@ match `supabase_migrations.schema_migrations` on the remote.
 | `20260901003112` | `init_multitenant_schema` | Base multi-tenant schema, RLS, `handle_new_user` signup trigger |
 | `20260901003144` | `harden_functions` | `security invoker` + pinned `search_path`, revoke EXECUTE from client roles |
 | `20260901014234` | `per_user_job_status` | Move per-user job lifecycle state onto `job_analysis` |
-| `20260901120000` | `idempotent_account_initialization` | `on conflict do nothing` in `handle_new_user` |
+| `20260901093525` | `idempotent_account_initialization` | `on conflict do nothing` in `handle_new_user` |
+| `20260902101500` | `tenant_scoped_child_fks` | Composite `(id, user_id)` keys + `(child_id, user_id)` FKs so child rows cannot reference another tenant's parent |
 
 ## Applying new migrations
 

@@ -72,10 +72,10 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "application_resume_version_id_fkey"
-            columns: ["resume_version_id"]
+            columns: ["resume_version_id", "user_id"]
             isOneToOne: false
             referencedRelation: "resume_version"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "user_id"]
           },
         ]
       }
@@ -113,10 +113,10 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "education_profile_id_fkey"
-            columns: ["profile_id"]
+            columns: ["profile_id", "user_id"]
             isOneToOne: false
             referencedRelation: "profile"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "user_id"]
           },
         ]
       }
@@ -157,10 +157,10 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "experience_profile_id_fkey"
-            columns: ["profile_id"]
+            columns: ["profile_id", "user_id"]
             isOneToOne: false
             referencedRelation: "profile"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "user_id"]
           },
         ]
       }
@@ -263,10 +263,10 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "master_resume_profile_id_fkey"
-            columns: ["profile_id"]
+            columns: ["profile_id", "user_id"]
             isOneToOne: false
             referencedRelation: "profile"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "user_id"]
           },
         ]
       }
@@ -337,10 +337,10 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "project_profile_id_fkey"
-            columns: ["profile_id"]
+            columns: ["profile_id", "user_id"]
             isOneToOne: false
             referencedRelation: "profile"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "user_id"]
           },
         ]
       }
@@ -407,10 +407,10 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "skill_profile_id_fkey"
-            columns: ["profile_id"]
+            columns: ["profile_id", "user_id"]
             isOneToOne: false
             referencedRelation: "profile"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "user_id"]
           },
         ]
       }

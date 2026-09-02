@@ -23,3 +23,24 @@ export function friendlyAuthError(message: string): string {
   }
   return "Something went wrong. Please try again."
 }
+
+/**
+ * Auth redirects (OAuth start failures, the `/auth/callback` handler) hand the
+ * sign-in page an `?error=<code>` rather than free text, so the page never
+ * reflects an attacker-controlled string into its error banner. Unknown or
+ * missing codes render nothing.
+ */
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  oauth_start: "Could not start Google sign-in. Please try again.",
+  oauth_failed: "That sign-in was cancelled or did not complete.",
+  link_invalid: "That sign-in link is invalid.",
+  link_expired: "That link has expired. Request a new one.",
+}
+
+export function authErrorMessage(
+  code: string | string[] | null | undefined,
+): string | null {
+  const key = Array.isArray(code) ? code[0] : code
+  if (!key) return null
+  return AUTH_ERROR_MESSAGES[key] ?? null
+}

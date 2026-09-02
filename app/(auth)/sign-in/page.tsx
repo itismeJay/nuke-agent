@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 
 import { FieldSeparator } from "@/components/ui/field"
+import { authErrorMessage } from "@/lib/auth/errors"
 import { safeRelativePath } from "@/lib/auth/redirect"
 
 import { CredentialsForm } from "../_components/credentials-form"
@@ -18,6 +19,7 @@ export default async function SignInPage({
 }) {
   const params = await searchParams
   const redirectTo = safeRelativePath(params.redirectTo) ?? undefined
+  const errorMessage = authErrorMessage(params.error)
 
   return (
     <AuthShell
@@ -35,8 +37,8 @@ export default async function SignInPage({
         </>
       }
     >
-      {params.error ? (
-        <FormMessage tone="error">{params.error}</FormMessage>
+      {errorMessage ? (
+        <FormMessage tone="error">{errorMessage}</FormMessage>
       ) : null}
       <GoogleButton redirectTo={redirectTo} />
       <FieldSeparator>or</FieldSeparator>

@@ -229,8 +229,9 @@ production.
 
 ### RLS / tenant-isolation tests (planned)
 
-Nook's security depends on Postgres RLS, so CI should eventually assert the
-critical property directly:
+Nook's security depends on Postgres RLS **and** on composite `(id, user_id)`
+foreign keys (D-018, migration `20260902101500`), so CI should eventually assert
+both directly:
 
 ```
 User A inserts a private row
@@ -238,7 +239,10 @@ User B SELECT  → 0 rows
 User B UPDATE  → 0 rows affected, A's row intact
 User B DELETE  → 0 rows affected
 anon SELECT    → 0 rows
+User B inserts a child row with user_id = B, profile_id = A  → foreign_key_violation
 ```
+
+Tracked as **TECH_DEBT TD-005**.
 
 Options and trade-offs:
 
