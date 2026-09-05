@@ -10,7 +10,11 @@ import type { Database } from "@/lib/supabase/database.types"
  *
  * Allowed callers — trusted, server-only background operations that legitimately
  * act across tenants:
- *   - (none yet)
+ *   - `inngest/functions/parse-resume.ts` — the résumé parse workflow runs with
+ *     no user session; it reads the private Storage object and writes
+ *     `resume_import` / `resume_import_item` rows. Every query is scoped to the
+ *     `user_id` carried in the Inngest event, and ownership of the
+ *     `master_resume` row is re-checked before any work is done.
  *
  * NOT allowed:
  *   - anything reachable from a React Server/Client Component render

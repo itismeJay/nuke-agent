@@ -64,9 +64,18 @@ export default async function DashboardPage() {
                 {completeness.score}%
               </span>
             </div>
-            <Button render={<Link href="/profile" />} className="w-fit">
-              {started ? "Continue your profile" : "Start your profile"}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button render={<Link href="/profile" />} className="w-fit">
+                {started ? "Continue your profile" : "Start your profile"}
+              </Button>
+              <Button
+                variant="outline"
+                render={<Link href="/resumes" />}
+                className="w-fit"
+              >
+                Import from résumé
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

@@ -115,6 +115,41 @@ No known debt should be invented merely to fill this file.
 - **Still open:** `application.mode`. Fold into the Phase 8 `application` rebuild.
   Do not do a standalone migration now.
 
+## TD-007 — `.npmrc` forces `legacy-peer-deps` for the whole project
+
+- **Status:** OPEN
+- **Introduced:** 2026-09-03 (Phase 3)
+- **Area:** dependency resolution
+- **Why it exists:** `inngest@4` declares many framework integrations (SvelteKit,
+  Astro, …) as **optional** peer dependencies. npm still tries to resolve their
+  transitive peers (`@sveltejs/vite-plugin-svelte` → `vite ^8`), which conflicts
+  with the `vite 7` that `vitest` brings in. `.npmrc` `legacy-peer-deps=true`
+  sidesteps the phantom conflict; the repo only uses `inngest/next`.
+- **Risk:** Low. It weakens peer-dep strictness repo-wide, so a genuinely
+  incompatible peer could install without a warning. `npm ci` in CI reads the
+  same `.npmrc`, so local and CI stay consistent.
+- **When to address:** revisit on the next `inngest` major, or narrow to a
+  targeted `overrides` entry if a real peer conflict is later masked.
+- **Resolution:** —
+
+## TD-008 — `parse-pipeline.ts` / `apply.ts` have no unit coverage
+
+- **Status:** OPEN (accepted for Phase 3)
+- **Introduced:** 2026-09-03
+- **Area:** test coverage
+- **Why it exists:** both are `import "server-only"` and orchestrate Supabase +
+  the Anthropic SDK; the unit layer (`vitest.config.ts`) deliberately excludes
+  server-only modules. The deterministic core (`diff.ts`, `match.ts`,
+  `normalize.ts`, `validation.ts`, `resume-schema.ts`) is unit-tested; the
+  DB/RLS surface is in `test:db`.
+- **Risk:** Medium until the Phase 3 runtime path is exercised end to end — the
+  merge (`applyOne` per entity) and the Inngest step wiring are only covered by
+  manual QA.
+- **When to address:** add a mocked-client integration test for `applyImport`
+  and `parseResume` when the component/integration test layer lands (TD-002), or
+  sooner if a merge bug surfaces.
+- **Resolution:** —
+
 ---
 
 ## Resolved

@@ -4,8 +4,15 @@ _Last updated: 2026-09-03_
 
 ## Current Phase
 
-**Phase 2 — Career Profile: COMPLETE** (pending human acceptance).
-Next: **Phase 3 — Master Resume Import, Re-import & Inngest Resume Processing.**
+**Phase 3 — Master Resume Import: CODE COMPLETE** (2026-09-03). All gates green
+(lint / typecheck / test 79 / test:db 11 / build; `npm audit` clean; advisors
+clean). **Runtime E2E is BLOCKED** — a real résumé parse needs Inngest running;
+the phase is not COMPLETE and not human-accepted. Decisions D-022…D-025.
+`SUPABASE_SERVICE_ROLE_KEY` (remote) is now set in `.env.local`. Extraction
+temporarily runs on Gemini, not Anthropic (D-025, 2026-09-05) — no
+`ANTHROPIC_API_KEY` needed until that reverts.
+
+Phase 2 — Career Profile: COMPLETE (still pending human acceptance).
 
 Product direction was re-baselined on 2026-09-02: ship the **manual** application
 loop first (Phases 0–8), layer Assisted Apply (Browserbase, Phase 10) and
@@ -86,15 +93,49 @@ Auto Apply to Future Optional. See `BUILD_PLAN.md` and `DECISIONS.md` D-014…D-
   `DEPLOY_ENABLED=true`) now gated on `db-tests` too. Full design in
   `docs/project/CICD.md`.
 
+## Phase 3 — Résumé Import (code, 2026-09-03)
+
+- **Migration `20260902202542_resume_import_schema`** (remote + vendored,
+  matching version; advisors clean; replays on a fresh local stack):
+  `master_resume` gains storage metadata + `is_primary` (partial unique) +
+  `parse_status` state machine + `updated_at` + `unique (id, user_id)`;
+  new `resume_import` / `resume_import_item` with RLS "own rows" + composite
+  `(id, user_id)` FKs (D-018); private `master-resumes` Storage bucket +
+  owner-scoped SELECT/INSERT object policies (no UPDATE/DELETE → immutable).
+- **`lib/ai/`** — `claude.ts` (`extractResumeData`, lazy Anthropic client,
+  `messages.parse` + `zodOutputFormat`, `claude-sonnet-5`), `resume-schema.ts`
+  (Zod, every field nullable, `uncertain` flag), `prompts.ts` (versioned,
+  injection-hardened). Only place the Anthropic SDK is imported (D-022).
+- **`lib/resume/`** — `validation` (magic bytes / size / filename / encrypted),
+  `normalize` (dates → ISO, urls, comparison keys), `match` + `diff` (versioned
+  deterministic matcher + NEW/CHANGED/UNCHANGED/CONFLICT classifier),
+  `profile-snapshot`, `parse-pipeline` (Inngest step units, `server-only`),
+  `apply` (RLS-scoped merge, per-item failure isolation, field allow-list),
+  `queries`, `actions` (upload / retry / setPrimary / discard / apply / view).
+- **`inngest/`** — `client.ts` (`new Inngest({id:"nook"})` + typed
+  `sendResumeUploaded`), `functions/parse-resume.ts` (`concurrency` 1/user,
+  `idempotency`, `onFailure`). `app/api/inngest/route.ts` (`serve`).
+  `middleware.ts` now excludes `/api`.
+- **`lib/supabase/admin.ts`** — activated (D-024): the résumé parser is the sole
+  documented caller. `SUPABASE_SERVICE_ROLE_KEY` still unset in `.env.local`.
+- **`/resumes`** — real page: upload, master-résumé list with parse-status
+  badges + Primary/Retry/Original actions, `router.refresh` poller while
+  parsing. **`/resumes/import/[id]`** — field-by-field review grouped by
+  classification, per-item accept/reject/edit, "select recommended", apply.
+  "Import from résumé" links on `/profile` + dashboard.
+- **New deps:** `@anthropic-ai/sdk`, `inngest`; `.npmrc` `legacy-peer-deps=true`
+  (inngest's optional framework peers vs vitest's `vite`); `next.config.ts`
+  `serverActions.bodySizeLimit`.
+- **Tests:** +unit for `validation` / `normalize` / `diff` / `resume-schema`;
+  +`test:db` for `resume_import` / `resume_import_item` RLS + composite FK +
+  anon. `parse-pipeline` / `apply` are `server-only` (no unit layer, repo
+  pattern).
+
 ## Planned (not yet in the repo)
 
-- **Inngest** — selected durable-workflow system (D-016). Not installed. Enters
-  the codebase in **Phase 3** for resume parsing. Do not describe it as
-  implemented.
-- **Supabase Storage** — private buckets for master resumes (Phase 3) and
-  generated PDFs (Phase 7). Not created yet.
-- **AI provider (Claude) abstraction** — `parseResume()` / `analyzeJob()` /
-  `tailorResume()`. Phase 3+.
+- **AI provider abstraction beyond `lib/ai/`** — only if a second provider
+  becomes real (D-022). `analyzeJob()` / `tailorResume()` land in Phase 5/6.
+- **Supabase Storage** — private bucket for generated PDFs (Phase 7).
 - **Brave Search** — manual job discovery, Phase 4.
 - **Browserbase + Stagehand** — Assisted Apply, Phase 10. Not installed.
 - **Stripe** — Phase 13, after cost measurement.
@@ -103,7 +144,12 @@ Auto Apply to Future Optional. See `BUILD_PLAN.md` and `DECISIONS.md` D-014…D-
 
 ## Blockers
 
-- None. Phase 2 is closed; Phase 3 (resume import + Inngest) is next.
+- **Phase 3 runtime verification** needs Inngest running — an Inngest account
+  (`INNGEST_EVENT_KEY`/`INNGEST_SIGNING_KEY` for the deployed runtime) or
+  `npx inngest-cli dev` locally. `SUPABASE_SERVICE_ROLE_KEY` (remote) and a
+  résumé-extraction provider (Gemini, D-025) are both already in `.env.local`.
+  Until Inngest runs, the parse→review→merge round trip is unproven and
+  Phase 3 stays code-complete, not COMPLETE.
 
 ## Active architecture
 
@@ -113,15 +159,19 @@ Auto Apply to Future Optional. See `BUILD_PLAN.md` and `DECISIONS.md` D-014…D-
   local stack** (`supabase/config.toml`) for `db reset` / typegen / `test:db`
 - `@supabase/ssr` cookie sessions; `middleware.ts` (not `proxy.ts`, D-012) refresh
 - `zod` for Server Action input validation (added Phase 2)
+- **Inngest** durable workflows (D-016/D-023) — résumé parsing; `/api/inngest`
+- **`@anthropic-ai/sdk`** — résumé extraction, isolated to `lib/ai/` (D-022);
+  currently dormant — extraction runs on `@google/genai` (Gemini) instead,
+  temporarily, until Anthropic billing is set up (D-025)
+- **Supabase Storage** — private `master-resumes` bucket (D-024 admin client)
 - Deployment target: GitHub Actions → Vercel (D-019); **no AWS**
-- Inngest / Browserbase / AI providers / Brave / Stripe: not yet introduced
+- Browserbase / Brave / Stripe: not yet introduced
 
 ## Deferred to later phases (not debt)
 
-- Private Storage buckets (Phase 3 / 7), Inngest (Phase 3), service-role client
-  wiring (whenever a trusted background job first needs it), production redirect
-  URLs + separate non-prod Supabase project + re-enabling email confirmation
-  (deploy time / Phase 15).
+- Generated-PDF Storage bucket (Phase 7), production redirect URLs + separate
+  non-prod Supabase project + re-enabling email confirmation (deploy time /
+  Phase 15).
 
 ## Known gaps (tracked in TECH_DEBT)
 
@@ -132,6 +182,8 @@ Auto Apply to Future Optional. See `BUILD_PLAN.md` and `DECISIONS.md` D-014…D-
 - `application.mode` enum still `('manual','auto')` — rework in Phase 8 (TD-006).
 - `middleware.ts` on the deprecated Next 16 convention (TD-001).
 - `next build`/`next dev` appends a block to `AGENTS.md` (TD-004).
+- `.npmrc` `legacy-peer-deps=true` — inngest@4's optional framework peers vs
+  vitest's `vite` (TD-007).
 
 ## Deploy-time checklist (before a public URL)
 
@@ -140,5 +192,9 @@ Auto Apply to Future Optional. See `BUILD_PLAN.md` and `DECISIONS.md` D-014…D-
    or Google OAuth breaks on the deployed site.
 3. Decide on email confirmation (D-013) — currently anyone can sign up with an
    unverified address.
-4. `CICD.md` → "Vercel configuration required" and "GitHub configuration
+4. **Phase 3:** `GEMINI_API_KEY` (or `ANTHROPIC_API_KEY` once D-025 reverts),
+   `SUPABASE_SERVICE_ROLE_KEY`, `INNGEST_EVENT_KEY`, `INNGEST_SIGNING_KEY` in
+   Vercel Production + Preview; create the Inngest Cloud app and sync it to
+   `/api/inngest` (Preview vs Production environments).
+5. `CICD.md` → "Vercel configuration required" and "GitHub configuration
    required" for the full one-time setup.

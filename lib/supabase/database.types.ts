@@ -496,23 +496,56 @@ export type Database = {
       }
       master_resume: {
         Row: {
-          file_url: string | null
+          byte_size: number
+          checksum: string | null
+          content_type: string
           id: string
+          is_primary: boolean
+          original_filename: string
+          page_count: number | null
+          parse_error: string | null
+          parse_status: string
+          parsed_at: string | null
           profile_id: string
+          storage_bucket: string
+          storage_path: string
+          updated_at: string
           uploaded_at: string
           user_id: string
         }
         Insert: {
-          file_url?: string | null
+          byte_size: number
+          checksum?: string | null
+          content_type?: string
           id?: string
+          is_primary?: boolean
+          original_filename: string
+          page_count?: number | null
+          parse_error?: string | null
+          parse_status?: string
+          parsed_at?: string | null
           profile_id: string
+          storage_bucket?: string
+          storage_path: string
+          updated_at?: string
           uploaded_at?: string
           user_id: string
         }
         Update: {
-          file_url?: string | null
+          byte_size?: number
+          checksum?: string | null
+          content_type?: string
           id?: string
+          is_primary?: boolean
+          original_filename?: string
+          page_count?: number | null
+          parse_error?: string | null
+          parse_status?: string
+          parsed_at?: string | null
           profile_id?: string
+          storage_bucket?: string
+          storage_path?: string
+          updated_at?: string
           uploaded_at?: string
           user_id?: string
         }
@@ -711,6 +744,155 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "skill"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      resume_import: {
+        Row: {
+          algorithm_version: string | null
+          applied_at: string | null
+          created_at: string
+          error: string | null
+          extracted: Json | null
+          id: string
+          idempotency_key: string
+          master_resume_id: string
+          model: string | null
+          profile_id: string
+          prompt_version: string | null
+          raw_text_chars: number | null
+          reviewed_at: string | null
+          status: string
+          token_usage: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          algorithm_version?: string | null
+          applied_at?: string | null
+          created_at?: string
+          error?: string | null
+          extracted?: Json | null
+          id?: string
+          idempotency_key: string
+          master_resume_id: string
+          model?: string | null
+          profile_id: string
+          prompt_version?: string | null
+          raw_text_chars?: number | null
+          reviewed_at?: string | null
+          status?: string
+          token_usage?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          algorithm_version?: string | null
+          applied_at?: string | null
+          created_at?: string
+          error?: string | null
+          extracted?: Json | null
+          id?: string
+          idempotency_key?: string
+          master_resume_id?: string
+          model?: string | null
+          profile_id?: string
+          prompt_version?: string | null
+          raw_text_chars?: number | null
+          reviewed_at?: string | null
+          status?: string
+          token_usage?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resume_import_master_resume_id_fkey"
+            columns: ["master_resume_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "master_resume"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "resume_import_profile_id_fkey"
+            columns: ["profile_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "profile"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
+      resume_import_item: {
+        Row: {
+          applied_at: string | null
+          applied_row_id: string | null
+          applied_value: Json | null
+          apply_error: string | null
+          classification: string
+          confidence: string
+          created_at: string
+          current: Json | null
+          decision: string
+          entity_type: string
+          field: string | null
+          id: string
+          match_target_id: string | null
+          match_target_table: string | null
+          proposed: Json
+          recommended: boolean
+          resume_import_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          applied_at?: string | null
+          applied_row_id?: string | null
+          applied_value?: Json | null
+          apply_error?: string | null
+          classification: string
+          confidence?: string
+          created_at?: string
+          current?: Json | null
+          decision?: string
+          entity_type: string
+          field?: string | null
+          id?: string
+          match_target_id?: string | null
+          match_target_table?: string | null
+          proposed: Json
+          recommended?: boolean
+          resume_import_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          applied_at?: string | null
+          applied_row_id?: string | null
+          applied_value?: Json | null
+          apply_error?: string | null
+          classification?: string
+          confidence?: string
+          created_at?: string
+          current?: Json | null
+          decision?: string
+          entity_type?: string
+          field?: string | null
+          id?: string
+          match_target_id?: string | null
+          match_target_table?: string | null
+          proposed?: Json
+          recommended?: boolean
+          resume_import_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resume_import_item_resume_import_id_fkey"
+            columns: ["resume_import_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "resume_import"
+            referencedColumns: ["id", "user_id"]
           },
         ]
       }

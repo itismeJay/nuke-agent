@@ -1,5 +1,7 @@
 import type { Metadata } from "next"
+import Link from "next/link"
 
+import { Button } from "@/components/ui/button"
 import { loadCareerProfile } from "@/lib/profile/queries"
 
 import { PageShell } from "../_components/page-shell"
@@ -14,6 +16,11 @@ export default async function ProfilePage() {
     <PageShell
       title="Career Profile"
       description="The trusted source of truth for matching, tailoring, and applications. Fill in what you can — every section is optional and editable."
+      actions={
+        <Button variant="outline" render={<Link href="/resumes" />}>
+          Import from résumé
+        </Button>
+      }
     >
       <ProfileWorkspace data={data} />
     </PageShell>

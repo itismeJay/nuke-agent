@@ -179,3 +179,78 @@ skill_id)` prevents duplicates per profile.
 The catalog is seeded with ~100 common skills in the migration and grows from
 user input. Curation / merge / rename is a future service-role / admin concern —
 there is no moderation UI yet.
+
+## D-022 — Résumé text extraction: Claude native PDF, PDF-only for Phase 3
+**Status:** Accepted (2026-09-03)
+
+The résumé parse pipeline sends the uploaded PDF bytes directly to Claude as a
+`document` content block (`client.messages.parse` + `zodOutputFormat`) — no
+PDF-text-extraction library. Claude reads multi-column layouts and tables
+itself; the output is constrained to a Zod schema and re-validated on the way
+out. Model: `claude-sonnet-5` at `effort: "low"` (bounded transcription; a
+one-line constant in `lib/ai/claude.ts`).
+
+Phase 3 accepts **PDF only**. Upload validation sniffs the `%PDF-` magic bytes
+(not the extension), rejects `>10 MB` and password-protected PDFs, and a
+scanned/image-only PDF fails the parse with a clear message (no OCR). DOCX is a
+deliberate fast-follow — one `mammoth` dependency and one extraction branch,
+nothing structural.
+
+No multi-provider AI abstraction: the Anthropic SDK lives only in `lib/ai/`
+behind `server-only`. A second provider gets an interface when it is real
+(D-001), not before.
+
+## D-023 — Inngest enters the repo; Inngest Cloud, environment-separated
+**Status:** Accepted (2026-09-03)
+
+Inngest (D-016) is now installed. The client is `new Inngest({ id: "nook" })`
+(`inngest/client.ts`); functions register through `app/api/inngest/route.ts`
+(`serve` from `inngest/next`), which is excluded from the auth middleware and
+signature-verified in deployed environments. Local dev uses
+`npx inngest-cli@latest dev` — no keys. Deployed environments need
+`INNGEST_EVENT_KEY` / `INNGEST_SIGNING_KEY` per Inngest environment (Preview vs
+Production), synced to the Vercel URL — a deploy-time step like the Supabase
+redirect allowlist.
+
+`inngest@4`'s wide set of optional framework peers (SvelteKit, …) conflicts with
+the `vite` that `vitest` pulls in, so the repo adds `.npmrc`
+`legacy-peer-deps=true` (read by both `npm install` and CI's `npm ci`). We only
+use `inngest/next`.
+
+## D-024 — The service-role Supabase client is activated for the résumé parser
+**Status:** Accepted (2026-09-03)
+
+`lib/supabase/admin.ts` was dormant (`SUPABASE_SERVICE_ROLE_KEY` unset
+everywhere). The Inngest résumé parse workflow is its first and only sanctioned
+caller: it runs with no user session, so it needs to read the private Storage
+object and write `resume_import` rows. Every admin query is scoped to the
+`user_id` in the Inngest event, and `master_resume` ownership is re-checked
+before any work. The key is server-only, never logged, never bundled; it must be
+set in `.env.local` and in the deployed runtime environment. The synchronous
+merge (`applyResumeImport`) still runs under the **user's** RLS-scoped client.
+
+## D-025 — Résumé extraction provider swapped to Gemini (temporary)
+**Status:** Accepted (2026-09-05)
+
+Anthropic API billing isn't set up yet. `lib/resume/parse-pipeline.ts` imports
+`extractResumeData` from `lib/ai/gemini.ts` instead of `lib/ai/claude.ts` — a
+one-line import change, nothing structural. Both files share
+`resume-schema.ts` and `prompts.ts` so they can't drift apart; `claude.ts` is
+left in place, working, untouched, as the revert path once Anthropic billing
+exists. Model: `gemini-3.5-flash-lite` (a Flash-tier model on this key's free tier as
+of 2026-09-05 — every Pro-tier model returns `RESOURCE_EXHAUSTED` on free-tier
+quota; re-check `ai.models.list()` before bumping it). Originally
+`gemini-3.8-flash`; switched the same day after that model's free-tier daily
+quota (20 requests/day, tracked per model) was exhausted by testing.
+
+Gemini's `responseJsonSchema` only accepts a fixed JSON Schema keyword subset
+and has no `"null"` type/`nullable` keyword, unlike Anthropic's
+`zodOutputFormat`. `gemini.ts` sanitizes `resumeExtractionSchema`'s generated
+JSON Schema down to that subset (collapsing `anyOf: [T, null]` and
+`type: [T, "null"]` forms, dropping now-optional keys from `required`) before
+sending it; `resumeExtractionSchema.safeParse` still re-validates the response
+exactly as the Anthropic path does. Same invariant either way: the model only
+transcribes, output never reaches trusted data without human review.
+
+Reaffirms D-001 — no multi-provider abstraction is being built around this;
+switching providers stays a one-line import in `parse-pipeline.ts`.

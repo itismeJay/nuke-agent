@@ -17,6 +17,7 @@ version.
 | `20260901093525` | `idempotent_account_initialization` | `on conflict do nothing` in `handle_new_user` |
 | `20260902034701` | `tenant_scoped_child_fks` | Composite `(id, user_id)` keys + `(child_id, user_id)` FKs so child rows cannot reference another tenant's parent |
 | `20260902192324` | `career_profile_schema` | Phase 2: Career Profile tables, shared `skill` catalog, `source` provenance, RLS + composite FKs on every new user-owned table |
+| `20260902202542` | `resume_import_schema` | Phase 3: `master_resume` upload/parse-state columns + primary flag, `resume_import` + `resume_import_item` (reviewable proposals), private `master-resumes` Storage bucket + owner-scoped insert-once object policies |
 
 ## Local development
 

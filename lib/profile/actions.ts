@@ -9,6 +9,7 @@ import type { Database } from "@/lib/supabase/database.types"
 import type { SupabaseClient, User } from "@supabase/supabase-js"
 
 import { resolveOwnProfileId } from "./owner"
+import { resolveSkillIds } from "./skills-catalog"
 import {
   achievementSchema,
   addProfileSkillSchema,
@@ -21,7 +22,6 @@ import {
   projectSchema,
   updateProfileSkillSchema,
 } from "./schemas"
-import { normalizeSkillName, slugifySkill } from "./skills"
 
 export type ActionState = {
   ok?: boolean
@@ -285,36 +285,6 @@ export async function deleteAchievement(formData: FormData): Promise<ActionState
 // ---------------------------------------------------------------------------
 // Skills (shared canonical catalog + profile_skill / project_skill)
 // ---------------------------------------------------------------------------
-
-/**
- * Resolve skill names to catalog ids, inserting any that are new. The `skill`
- * catalog is append-only for `authenticated` (INSERT policy, no UPDATE), so we
- * insert-ignore-duplicates and then read every row back by slug.
- */
-async function resolveSkillIds(supabase: DB, names: string[]): Promise<string[]> {
-  const unique = [...new Map(names.map((n) => [slugifySkill(n), n])).entries()].filter(
-    ([slug]) => slug.length > 0,
-  )
-  if (unique.length === 0) return []
-  const slugs = unique.map(([slug]) => slug)
-
-  const { error: insertError } = await supabase.from("skill").upsert(
-    unique.map(([slug, name]) => ({ slug, name: normalizeSkillName(name) })),
-    { onConflict: "slug", ignoreDuplicates: true },
-  )
-  if (insertError) throw insertError
-
-  const { data, error } = await supabase
-    .from("skill")
-    .select("id, slug")
-    .in("slug", slugs)
-  if (error) throw error
-
-  const bySlug = new Map((data ?? []).map((row) => [row.slug, row.id]))
-  return slugs
-    .map((slug) => bySlug.get(slug))
-    .filter((id): id is string => Boolean(id))
-}
 
 export async function addSkill(
   _prev: ActionState,

@@ -123,6 +123,14 @@ file_size_limit = "50MiB"
 # allowed_mime_types = ["image/png", "image/jpeg"]
 # objects_path = "./images"
 
+# Private bucket for uploaded master résumés (Phase 3). The bucket + RLS
+# policies are also created by migration 20260902202542_resume_import_schema;
+# this block just mirrors the config for a fresh local stack.
+[storage.buckets.master-resumes]
+public = false
+file_size_limit = "10MiB"
+allowed_mime_types = ["application/pdf"]
+
 # Allow connections via S3 compatible clients
 [storage.s3_protocol]
 enabled = true

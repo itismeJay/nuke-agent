@@ -258,3 +258,111 @@ suite("Career Profile tenant isolation", () => {
     })
   })
 })
+
+/** Insert a master_resume for `userId`/`profileId` and return its id. */
+async function seedResume(userId: string, profileId: string): Promise<string> {
+  const { rows } = await client.query<{ id: string }>(
+    `insert into public.master_resume
+       (user_id, profile_id, storage_bucket, storage_path, original_filename, content_type, byte_size)
+     values ($1::uuid, $2::uuid, 'master-resumes', $3, 'cv.pdf', 'application/pdf', 1000)
+     returning id`,
+    [userId, profileId, `${userId}/${crypto.randomUUID()}.pdf`],
+  )
+  return rows[0].id
+}
+
+suite("Résumé import tenant isolation", () => {
+  it("a tenant can create its own import + item children", async () => {
+    await withTenants(async ({ profileA, asUser }) => {
+      await asUser(USER_A)
+      const resumeId = await seedResume(USER_A, profileA)
+      const imp = await client.query<{ id: string }>(
+        `insert into public.resume_import (user_id, master_resume_id, profile_id, idempotency_key)
+         values ($1, $2, $3, gen_random_uuid()::text) returning id`,
+        [USER_A, resumeId, profileA],
+      )
+      expect(imp.rows).toHaveLength(1)
+      await client.query(
+        `insert into public.resume_import_item
+           (user_id, resume_import_id, entity_type, classification, proposed)
+         values ($1, $2, 'skill', 'new', '{"name":"Rust"}'::jsonb)`,
+        [USER_A, imp.rows[0].id],
+      )
+    })
+  })
+
+  it("a tenant cannot read, update or delete another tenant's imports", async () => {
+    await withTenants(async ({ profileA, asUser }) => {
+      await asUser(USER_A)
+      const resumeId = await seedResume(USER_A, profileA)
+      const { rows } = await client.query<{ id: string }>(
+        `insert into public.resume_import (user_id, master_resume_id, profile_id, idempotency_key)
+         values ($1, $2, $3, gen_random_uuid()::text) returning id`,
+        [USER_A, resumeId, profileA],
+      )
+      const importA = rows[0].id
+
+      await asUser(USER_B)
+      expect(
+        (await client.query(`select * from public.resume_import where id = $1`, [importA]))
+          .rows,
+      ).toHaveLength(0)
+      expect(
+        (await client.query(`update public.resume_import set status = 'failed' where id = $1`, [importA]))
+          .rowCount,
+      ).toBe(0)
+      expect(
+        (await client.query(`delete from public.resume_import where id = $1`, [importA]))
+          .rowCount,
+      ).toBe(0)
+    })
+  })
+
+  it("composite FKs reject imports/items pointing at another tenant's parent", async () => {
+    await withTenants(async ({ profileA, profileB, asUser }) => {
+      await asUser(USER_A)
+      const resumeA = await seedResume(USER_A, profileA)
+      const { rows } = await client.query<{ id: string }>(
+        `insert into public.resume_import (user_id, master_resume_id, profile_id, idempotency_key)
+         values ($1, $2, $3, gen_random_uuid()::text) returning id`,
+        [USER_A, resumeA, profileA],
+      )
+      const importA = rows[0].id
+
+      await asUser(USER_B)
+      // B's user_id + A's master_resume_id
+      await expectSqlState("23503", () =>
+        client.query(
+          `insert into public.resume_import (user_id, master_resume_id, profile_id, idempotency_key)
+           values ($1, $2, $3, gen_random_uuid()::text)`,
+          [USER_B, resumeA, profileB],
+        ),
+      )
+      // B's user_id + A's resume_import_id
+      await expectSqlState("23503", () =>
+        client.query(
+          `insert into public.resume_import_item
+             (user_id, resume_import_id, entity_type, classification, proposed)
+           values ($1, $2, 'skill', 'new', '{}'::jsonb)`,
+          [USER_B, importA],
+        ),
+      )
+    })
+  })
+
+  it("anon sees no import rows", async () => {
+    await withTenants(async ({ profileA, asUser, asAnon }) => {
+      await asUser(USER_A)
+      const resumeId = await seedResume(USER_A, profileA)
+      await client.query(
+        `insert into public.resume_import (user_id, master_resume_id, profile_id, idempotency_key)
+         values ($1, $2, $3, gen_random_uuid()::text)`,
+        [USER_A, resumeId, profileA],
+      )
+      await asAnon()
+      expect(
+        (await client.query(`select count(*)::int as n from public.resume_import`)).rows[0].n,
+      ).toBe(0)
+    })
+  })
+})

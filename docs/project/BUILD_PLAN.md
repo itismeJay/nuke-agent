@@ -192,43 +192,47 @@ history/versioning, profile export.
 
 # Phase 3 — Master Resume Import, Re-import & Inngest Resume Processing
 
-**Status:** NOT STARTED — introduces Inngest and Supabase Storage
-
-## Goal
-
-Use resumes to *enrich* the Career Profile through reviewed proposals. The PDF never becomes the source of truth (D-002, D-003).
+**Status:** CODE COMPLETE (2026-09-03) — runtime E2E BLOCKED on secrets, not yet
+human-accepted. Decisions D-022…D-024. Migration
+`20260902202542_resume_import_schema`. PDF-only for this phase (DOCX = fast-follow).
 
 ## Storage
 
-- [ ] private Supabase bucket for master resumes
-- [ ] validated upload — size limit, MIME/type check (not extension alone), safe filename, ownership-scoped path
-- [ ] authenticated / short-lived signed access
-- [ ] original file immutable after upload
+- [x] private Supabase bucket for master resumes (`master-resumes`, created in the migration)
+- [x] validated upload — size limit, `%PDF-` magic-byte check (not extension), sanitized filename, `{userId}/{uuid}.pdf` path, encrypted-PDF rejected
+- [x] short-lived signed access (60 s, `Content-Disposition: attachment`)
+- [x] original file immutable after upload (no UPDATE/DELETE storage policy)
 
 ## Data
 
-- [ ] `master_resume` metadata (extend existing table); primary-resume flag; parse state
-- [ ] parse-run records; profile-import-run records
+- [x] `master_resume` extended — storage metadata, `is_primary` (+ partial unique), `parse_status` state machine, `parsed_at`, `updated_at`
+- [x] `resume_import` (parse+review run, write-once `extracted` jsonb, `idempotency_key`) + `resume_import_item` (one classified, reviewable fact) — RLS + composite FKs
 
 ## Inngest (first use in the codebase — D-016)
 
-- [ ] install + configure Inngest; expose the route handler; dev/prod env separation
-- [ ] upload returns quickly, then emits a parse event
-- [ ] parse workflow: extract text → constrained AI parse → Zod validation → store proposal → ready-for-review
-- [ ] uncertainty represented, never fabricated (D-005 truth rule; §12–13 of the direction prompt)
-- [ ] retry is idempotent
+- [x] installed; `inngest/client.ts` + `app/api/inngest/route.ts` (`serve`); middleware excludes `/api`; dev = `inngest-cli dev`, prod = env-separated keys
+- [x] upload returns quickly, then emits `resume/uploaded`
+- [x] `parseResume`: download → constrained Claude parse (`messages.parse` + Zod) → re-validate → deterministic diff → store proposal → `ready_for_review`
+- [x] uncertainty represented (`confidence='low'` → never pre-selected/auto-applied), never fabricated
+- [x] retry idempotent — `idempotency` key + per-step memoization + `loadImportContext` short-circuit; `onFailure` records a user-safe failure
 
 ## Review / merge
 
-- [ ] user sees extracted data vs current profile: NEW / CHANGED / UNCHANGED / CONFLICT
-- [ ] accept / reject / edit per field; bulk "select recommended"
-- [ ] merge only confirmed facts; never silently overwrite trusted manual data; never delete profile data because a resume omits it
-- [ ] preserve richer/more precise existing data unless the user chooses otherwise
-- [ ] re-import of a newer resume keeps old master resumes and import history
+- [x] review UI shows NEW / CHANGED (fills a gap) / UNCHANGED / CONFLICT vs the current profile
+- [x] accept / reject / edit per item; "select recommended"
+- [x] merge writes only accepted facts (`source='resume_import'`); never overwrites a non-empty field without an explicit CONFLICT choice; never deletes on omission
+- [x] never auto-downgrades — a shorter/less precise résumé value against a non-empty field is a CONFLICT, not a silent CHANGE
+- [x] re-import creates a new `resume_import` row; all prior résumés + imports retained
 
 ## Done when
 
 A real resume uploads, parses asynchronously via Inngest, is reviewed field-by-field, and enriches the Career Profile while the original file stays unchanged. Re-importing a newer resume never destroys existing data.
+
+**Not yet verified at runtime** (needs Inngest running; extraction provider is
+currently Gemini not Anthropic, D-025 — `SUPABASE_SERVICE_ROLE_KEY` and a
+provider key are both already set). Everything below the DB/code layer is
+proven by gates; the parse→review→merge round trip on a real PDF is not. See
+`docs/features/active/resume-import.md`.
 
 ---
 
